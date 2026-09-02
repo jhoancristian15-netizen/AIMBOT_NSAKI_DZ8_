@@ -1,0 +1,620 @@
+--==================================================
+-- NSAKI_DZ8
+-- LocalScript
+-- StarterPlayer > StarterPlayerScripts
+--==================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+--==============================
+-- CONFIGURACIÓN
+--==============================
+
+local ESP = false
+local Aimbot = false
+local XRay = false
+local Noclip = false
+local Invisible = false -- NUEVA OPCIÓN
+
+local FOV_MIN = 50
+local FOV_MAX = 300
+local FOVRadius = 150
+
+local ESP_NAME = "NSAKI_DZ8_ESP"
+
+--==============================
+-- GUI CON FONDO PERSONALIZADO
+--==============================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "NSAKI_DZ8"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local main = Instance.new("Frame")
+main.Size = UDim2.fromOffset(350,480)
+main.Position = UDim2.new(0.5,-175,0.5,-240)
+main.BackgroundColor3 = Color3.fromRGB(0,0,0)
+main.BackgroundTransparency = 0.15
+main.BorderSizePixel = 0
+main.Parent = gui
+
+-- FONDO CON IMAGEN (DEMONIO)
+local background = Instance.new("ImageLabel")
+background.Size = UDim2.new(1,0,1,0)
+background.Position = UDim2.new(0,0,0,0)
+background.BackgroundTransparency = 1
+background.Image = "rbxassetid://6221759629271129710"
+background.ScaleType = Enum.ScaleType.Fit
+background.Parent = main
+
+-- BORDE DECORATIVO
+local border = Instance.new("Frame")
+border.Size = UDim2.new(1,4,1,4)
+border.Position = UDim2.new(0,-2,0,-2)
+border.BackgroundTransparency = 1
+border.BorderSizePixel = 2
+border.BorderColor3 = Color3.fromRGB(255,0,0)
+border.Parent = main
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0,12)
+mainCorner.Parent = main
+
+--==============================
+-- TÍTULO CON EFECTO
+--==============================
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,-50,0,50)
+title.Position = UDim2.fromOffset(15,10)
+title.BackgroundTransparency = 1
+title.Text = "NSAKI DZ8"
+title.TextColor3 = Color3.new(1,0,0)
+title.TextSize = 28
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = main
+
+-- Sombra del título
+local titleShadow = Instance.new("TextLabel")
+titleShadow.Size = UDim2.new(1,-50,0,50)
+titleShadow.Position = UDim2.fromOffset(17,12)
+titleShadow.BackgroundTransparency = 1
+titleShadow.Text = "NSAKI DZ8"
+titleShadow.TextColor3 = Color3.new(0.3,0,0)
+titleShadow.TextSize = 28
+titleShadow.Font = Enum.Font.GothamBold
+titleShadow.TextXAlignment = Enum.TextXAlignment.Left
+titleShadow.Parent = main
+
+local creator = Instance.new("TextLabel")
+creator.Size = UDim2.new(1,-30,0,25)
+creator.Position = UDim2.fromOffset(15,55)
+creator.BackgroundTransparency = 1
+creator.Text = "⚔️ Demon Edition ⚔️"
+creator.TextColor3 = Color3.fromRGB(200,50,50)
+creator.TextSize = 14
+creator.Font = Enum.Font.Gotham
+creator.TextXAlignment = Enum.TextXAlignment.Left
+creator.Parent = main
+
+--==============================
+-- CERRAR
+--==============================
+
+local close = Instance.new("TextButton")
+close.Size = UDim2.fromOffset(35,35)
+close.Position = UDim2.new(1,-42,0,8)
+close.BackgroundTransparency = 1
+close.Text = "✕"
+close.TextColor3 = Color3.new(1,0.2,0.2)
+close.TextSize = 22
+close.Font = Enum.Font.GothamBold
+close.Parent = main
+
+--==============================
+-- BOTONES
+--==============================
+
+local function createButton(text,y)
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.new(1,-30,0,40)
+	button.Position = UDim2.fromOffset(15,y)
+	button.BackgroundColor3 = Color3.fromRGB(30,0,0)
+	button.BackgroundTransparency = 0.3
+	button.BorderSizePixel = 0
+	button.Text = text
+	button.TextColor3 = Color3.new(1,0.8,0.8)
+	button.TextSize = 14
+	button.Font = Enum.Font.GothamSemibold
+	button.Parent = main
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0,8)
+	corner.Parent = button
+	
+	-- Efecto hover
+	button.MouseEnter:Connect(function()
+		button.BackgroundColor3 = Color3.fromRGB(60,0,0)
+	end)
+	button.MouseLeave:Connect(function()
+		button.BackgroundColor3 = Color3.fromRGB(30,0,0)
+	end)
+
+	return button
+end
+
+local aimbotButton = createButton("🎯 Aimbot: OFF",90)
+local espButton = createButton("👁️ ESP Rainbow: OFF",140)
+local xrayButton = createButton("👻 X-Ray: OFF",190)
+local noclipButton = createButton("💨 Noclip: OFF",240)
+local invisibleButton = createButton("🌀 Invisible: OFF",290)
+
+--==============================
+-- FOV TEXTO
+--==============================
+
+local fovText = Instance.new("TextLabel")
+fovText.Size = UDim2.new(1,-30,0,25)
+fovText.Position = UDim2.fromOffset(15,345)
+fovText.BackgroundTransparency = 1
+fovText.Text = "🎯 FOV: 150"
+fovText.TextColor3 = Color3.new(1,0.5,0.5)
+fovText.TextSize = 14
+fovText.Font = Enum.Font.GothamSemibold
+fovText.TextXAlignment = Enum.TextXAlignment.Left
+fovText.Parent = main
+
+--==============================
+-- SLIDER FOV
+--==============================
+
+local slider = Instance.new("Frame")
+slider.Size = UDim2.new(1,-30,0,8)
+slider.Position = UDim2.fromOffset(15,378)
+slider.BackgroundColor3 = Color3.fromRGB(60,0,0)
+slider.BorderSizePixel = 0
+slider.Parent = main
+
+local sliderCorner = Instance.new("UICorner")
+sliderCorner.CornerRadius = UDim.new(1,0)
+sliderCorner.Parent = slider
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new(0.5,0,1,0)
+sliderFill.BackgroundColor3 = Color3.new(1,0,0)
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = slider
+
+local sliderFillCorner = Instance.new("UICorner")
+sliderFillCorner.CornerRadius = UDim.new(1,0)
+sliderFillCorner.Parent = sliderFill
+
+local knob = Instance.new("Frame")
+knob.Size = UDim2.fromOffset(18,18)
+knob.AnchorPoint = Vector2.new(0.5,0.5)
+knob.BackgroundColor3 = Color3.new(1,0.2,0.2)
+knob.BorderSizePixel = 0
+knob.Parent = slider
+
+local knobCorner = Instance.new("UICorner")
+knobCorner.CornerRadius = UDim.new(1,0)
+knobCorner.Parent = knob
+
+--==============================
+-- CÍRCULO FOV
+--==============================
+
+local fovCircle = Instance.new("Frame")
+fovCircle.Name = "FOVCircle"
+fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
+fovCircle.Position = UDim2.fromScale(0.5,0.5)
+fovCircle.BackgroundTransparency = 1
+fovCircle.BorderSizePixel = 0
+fovCircle.Active = false
+fovCircle.Selectable = false
+fovCircle.Parent = gui
+
+local circleCorner = Instance.new("UICorner")
+circleCorner.CornerRadius = UDim.new(1,0)
+circleCorner.Parent = fovCircle
+
+local circleStroke = Instance.new("UIStroke")
+circleStroke.Thickness = 2
+circleStroke.Color = Color3.new(1,0,0)
+circleStroke.Parent = fovCircle
+
+--==============================
+-- ACTUALIZAR FOV
+--==============================
+
+local function updateFOV()
+	fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
+	fovCircle.Position = UDim2.fromScale(0.5,0.5)
+	fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
+	fovText.Text = "🎯 FOV: "..tostring(FOVRadius)
+
+	local percent = (FOVRadius-FOV_MIN) / (FOV_MAX-FOV_MIN)
+	knob.Position = UDim2.new(percent, 0, 0.5, 0)
+	sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+end
+
+updateFOV()
+
+--==============================
+-- SLIDER
+--==============================
+
+local draggingFOV = false
+
+local function changeFOV(x)
+	local left = slider.AbsolutePosition.X
+	local width = slider.AbsoluteSize.X
+	if width <= 0 then return end
+
+	local percent = math.clamp((x-left)/width, 0, 1)
+	FOVRadius = math.floor(FOV_MIN + percent * (FOV_MAX-FOV_MIN))
+	updateFOV()
+end
+
+slider.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingFOV = true
+		changeFOV(input.Position.X)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if not draggingFOV then return end
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		changeFOV(input.Position.X)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingFOV = false
+	end
+end)
+
+-- Mantener el círculo en el centro
+RunService.RenderStepped:Connect(function()
+	if fovCircle then
+		fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
+		fovCircle.Position = UDim2.fromScale(0.5,0.5)
+	end
+end)
+
+--==============================
+-- ESP RAINBOW
+--==============================
+
+local function removeESP(character)
+	if not character then return end
+	local old = character:FindFirstChild(ESP_NAME)
+	if old then old:Destroy() end
+end
+
+local function addESP(character)
+	if not ESP then return end
+	if not character then return end
+	if character == player.Character then return end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		humanoid = character:WaitForChild("Humanoid", 5)
+	end
+	if not humanoid then return end
+
+	removeESP(character)
+
+	local highlight = Instance.new("Highlight")
+	highlight.Name = ESP_NAME
+	highlight.Adornee = character
+	highlight.Enabled = true
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.FillTransparency = 0.4
+	highlight.OutlineTransparency = 0
+	highlight.Parent = character
+	
+	-- Color inicial
+	highlight.FillColor = Color3.fromHSV(0, 1, 1)
+	highlight.OutlineColor = Color3.fromHSV(0.5, 1, 1)
+	
+	return highlight
+end
+
+-- Función para actualizar colores rainbow
+local function updateRainbowColors()
+	if not ESP then return end
+	
+	local hue = (tick() * 0.2) % 1
+	
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character then
+			local highlight = plr.Character:FindFirstChild(ESP_NAME)
+			if highlight and highlight:IsA("Highlight") then
+				highlight.FillColor = Color3.fromHSV(hue, 1, 1)
+				highlight.OutlineColor = Color3.fromHSV((hue + 0.5) % 1, 1, 1)
+			end
+		end
+	end
+end
+
+local function updateESP()
+	for _,plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player then
+			if ESP then
+				if plr.Character then
+					addESP(plr.Character)
+				end
+			else
+				removeESP(plr.Character)
+			end
+		end
+	end
+end
+
+local function setupESPPlayer(plr)
+	if plr == player then return end
+
+	plr.CharacterAdded:Connect(function(character)
+		character:WaitForChild("Humanoid", 5)
+		task.wait(0.2)
+		if ESP then
+			addESP(character)
+		end
+	end)
+
+	if ESP and plr.Character then
+		addESP(plr.Character)
+	end
+end
+
+for _,plr in ipairs(Players:GetPlayers()) do
+	setupESPPlayer(plr)
+end
+
+Players.PlayerAdded:Connect(setupESPPlayer)
+
+Players.PlayerRemoving:Connect(function(plr)
+	removeESP(plr.Character)
+end)
+
+-- Loop para actualizar colores rainbow
+RunService.RenderStepped:Connect(function()
+	updateRainbowColors()
+end)
+
+--==============================
+-- INVISIBILIDAD
+--==============================
+
+local function setInvisible()
+	if not Invisible then return end
+	
+	local character = player.Character
+	if not character then return end
+	
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Transparency = 1
+			part.CanCollide = false
+		end
+		
+		-- Ocultar accesorios
+		if part:IsA("Accessory") or part:IsA("Hat") then
+			part.Handle.Transparency = 1
+		end
+		
+		-- Ocultar ropa
+		if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
+			part.Transparency = 1
+		end
+	end
+	
+	-- Ocultar humanoid
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.BreakJointsOnDeath = false
+	end
+end
+
+local function setVisible()
+	local character = player.Character
+	if not character then return end
+	
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Transparency = 0
+			part.CanCollide = true
+		end
+		
+		if part:IsA("Accessory") or part:IsA("Hat") then
+			part.Handle.Transparency = 0
+		end
+		
+		if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
+			part.Transparency = 0
+		end
+	end
+end
+
+-- Aplicar invisibilidad constantemente
+RunService.RenderStepped:Connect(function()
+	if Invisible then
+		setInvisible()
+	end
+end)
+
+--==============================
+-- NOCLIP
+--==============================
+
+RunService.Stepped:Connect(function()
+	if not Noclip then return end
+
+	local character = player.Character
+	if not character then return end
+
+	for _,part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+		end
+	end
+end)
+
+--==============================
+-- AIMBOT
+--==============================
+
+local function getClosestHead()
+	camera = workspace.CurrentCamera
+	if not camera then return nil end
+
+	local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+	local closest = nil
+	local closestDistance = FOVRadius
+
+	for _,plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player then
+			local character = plr.Character
+			if character then
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				local head = character:FindFirstChild("Head")
+				if humanoid and head and humanoid.Health > 0 then
+					local pos, visible = camera:WorldToViewportPoint(head.Position)
+					if visible and pos.Z > 0 then
+						local distance = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+						if distance < closestDistance then
+							closestDistance = distance
+							closest = head
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return closest
+end
+
+RunService.RenderStepped:Connect(function()
+	if not Aimbot then return end
+
+	camera = workspace.CurrentCamera
+	if not camera then return end
+
+	local head = getClosestHead()
+	if head then
+		camera.CFrame = CFrame.lookAt(camera.CFrame.Position, head.Position)
+	end
+end)
+
+--==============================
+-- X-RAY
+--==============================
+
+local xrayParts = {}
+
+local function enableXRay()
+	for _,object in ipairs(workspace:GetDescendants()) do
+		if object:IsA("BasePart") then
+			local character = player.Character
+			if not character or not object:IsDescendantOf(character) then
+				if xrayParts[object] == nil then
+					xrayParts[object] = object.LocalTransparencyModifier
+				end
+				object.LocalTransparencyModifier = 0.65
+			end
+		end
+	end
+end
+
+local function disableXRay()
+	for object,value in pairs(xrayParts) do
+		if object and object.Parent then
+			object.LocalTransparencyModifier = value
+		end
+	end
+	table.clear(xrayParts)
+end
+
+xrayButton.Activated:Connect(function()
+	XRay = not XRay
+	xrayButton.Text = XRay and "👻 X-Ray: ON" or "👻 X-Ray: OFF"
+	if XRay then
+		enableXRay()
+	else
+		disableXRay()
+	end
+end)
+
+--==============================
+-- BOTONES
+--==============================
+
+espButton.Activated:Connect(function()
+	ESP = not ESP
+	espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
+	updateESP()
+end)
+
+aimbotButton.Activated:Connect(function()
+	Aimbot = not Aimbot
+	aimbotButton.Text = Aimbot and "🎯 Aimbot: ON" or "🎯 Aimbot: OFF"
+end)
+
+noclipButton.Activated:Connect(function()
+	Noclip = not Noclip
+	noclipButton.Text = Noclip and "💨 Noclip: ON" or "💨 Noclip: OFF"
+end)
+
+invisibleButton.Activated:Connect(function()
+	Invisible = not Invisible
+	invisibleButton.Text = Invisible and "🌀 Invisible: ON" or "🌀 Invisible: OFF"
+	
+	if not Invisible then
+		setVisible()
+	end
+end)
+
+--==============================
+-- ABRIR / CERRAR
+--==============================
+
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.fromOffset(60,60)
+openButton.Position = UDim2.new(0,15,0.5,-30)
+openButton.Text = "🔥"
+openButton.TextSize = 30
+openButton.Font = Enum.Font.GothamBold
+openButton.TextColor3 = Color3.new(1,0.3,0)
+openButton.BackgroundColor3 = Color3.fromRGB(20,0,0)
+openButton.BackgroundTransparency = 0.3
+openButton.Visible = false
+openButton.Parent = gui
+
+local openCorner = Instance.new("UICorner")
+openCorner.CornerRadius = UDim.new(1,0)
+openCorner.Parent = openButton
+
+close.Activated:Connect(function()
+	main.Visible = false
+	openButton.Visible = true
+end)
+
+openButton.Activated:Connect(function()
+	main.Visible = true
+	openButton.Visible = false
+end)
+
+print("🔥 NSAKI_DZ8 - Demon Edition cargado")
+print("👿 ESP Rainbow activo - Colores cambiantes")
+print("🌀 Invisibilidad agregada")

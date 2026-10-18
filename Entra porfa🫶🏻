@@ -1,0 +1,478 @@
+import pygame
+import math
+import random
+import sys
+import os
+
+# ==================================================
+# ERIKA - VERSION CORREGIDA PARA PYDROID 3
+# ==================================================
+
+def main():
+    # Inicializar audio antes de pygame
+    try:
+        pygame.mixer.pre_init(
+            frequency=44100,
+            size=-16,
+            channels=2,
+            buffer=4096
+        )
+    except Exception:
+        pass
+
+    pygame.init()
+    pygame.font.init()
+
+    # --------------------------------------------------
+    # BUSCAR CARPETA ERIKA
+    # --------------------------------------------------
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    storage = "/storage/emulated/0"
+
+    carpetas = [
+        os.path.join(storage, "Download", "ERIKA"),
+        os.path.join(storage, "Descargas", "ERIKA"),
+        os.path.join(storage, "Download"),
+        os.path.join(storage, "Music"),
+        os.path.join(script_dir, "ERIKA"),
+        script_dir,
+    ]
+
+    # Eliminar rutas duplicadas
+    carpetas = list(dict.fromkeys(carpetas))
+
+    nombres_imagenes = [
+        "imagen.jpg",
+        "imagen1.jpg",
+        "imagen2.jpg",
+        "imagen3.jpg"
+    ]
+
+    folder_path = None
+
+    # Buscar la carpeta que contiene las imágenes
+    for carpeta in carpetas:
+        if not os.path.isdir(carpeta):
+            continue
+
+        if any(
+            os.path.isfile(os.path.join(carpeta, nombre))
+            for nombre in nombres_imagenes
+        ):
+            folder_path = carpeta
+            break
+
+    # Si no se encuentran imágenes, usar ERIKA
+    if folder_path is None:
+        for carpeta in carpetas:
+            if os.path.isdir(carpeta) and os.path.basename(carpeta) == "ERIKA":
+                folder_path = carpeta
+                break
+
+    if folder_path is None:
+        folder_path = script_dir
+
+    print("Carpeta de imágenes:", folder_path)
+
+    # --------------------------------------------------
+    # INICIAR Y REPRODUCIR LA MÚSICA
+    # --------------------------------------------------
+
+    audio_disponible = False
+    music_path = None
+
+    try:
+        if pygame.mixer.get_init() is None:
+            pygame.mixer.init(
+                frequency=44100,
+                size=-16,
+                channels=2,
+                buffer=4096
+            )
+
+        audio_disponible = pygame.mixer.get_init() is not None
+
+    except Exception as e:
+        print("ERROR AL INICIAR AUDIO:", e)
+
+    nombres_musica = [
+        "musica.mp3",
+        "Musica.mp3",
+        "música.mp3",
+        "musica.ogg",
+        "musica.wav"
+    ]
+
+    # Buscar la música en la carpeta de las imágenes
+    for nombre in nombres_musica:
+        posible = os.path.join(folder_path, nombre)
+
+        if os.path.isfile(posible):
+            music_path = posible
+            break
+
+    # También comprobar otras carpetas conocidas
+    if music_path is None:
+        for carpeta in carpetas:
+            for nombre in nombres_musica:
+                posible = os.path.join(carpeta, nombre)
+
+                if os.path.isfile(posible):
+                    music_path = posible
+                    break
+
+            if music_path:
+                break
+
+    if audio_disponible and music_path:
+        try:
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(1.0)
+            pygame.mixer.music.play(-1)
+
+            print("MUSICA INICIADA:", music_path)
+            print("La música se repetirá continuamente.")
+
+        except Exception as e:
+            print("ERROR AL REPRODUCIR MUSICA:", repr(e))
+            print("Comprueba que el archivo sea un audio válido.")
+
+    elif not music_path:
+        print("NO SE ENCONTRO LA MUSICA.")
+        print("Coloca musica.mp3 dentro de la carpeta ERIKA.")
+
+    else:
+        print("EL AUDIO NO ESTA DISPONIBLE EN PYDROID.")
+
+    # --------------------------------------------------
+    # PANTALLA
+    # --------------------------------------------------
+
+    info = pygame.display.Info()
+    W = max(320, info.current_w)
+    H = max(480, info.current_h)
+
+    screen = pygame.display.set_mode((W, H), pygame.FULLSCREEN)
+    pygame.display.set_caption("ERIKA")
+
+    BLACK = (0, 0, 0)
+    PINK = (255, 90, 175)
+    RAIN_BRIGHT = (255, 55, 100)
+
+    # --------------------------------------------------
+    # FUENTES
+    # --------------------------------------------------
+
+    phrase_font = pygame.font.SysFont(
+        "arial", max(12, int(min(W, H) * 0.018)), bold=True
+    )
+
+    erika_font = pygame.font.SysFont(
+        "arial", max(24, int(min(W, H) * 0.045)), bold=True
+    )
+
+    rain_font = pygame.font.SysFont(
+        "consolas", max(10, int(min(W, H) * 0.018))
+    )
+
+    popup_font = pygame.font.SysFont(
+        "arial", max(15, int(min(W, H) * 0.022)), bold=True
+    )
+
+    # --------------------------------------------------
+    # CORAZON
+    # --------------------------------------------------
+
+    cx = W * 0.50
+    cy = H * 0.42
+    heart_size = min(W, H) * 0.45
+
+    # --------------------------------------------------
+    # IMAGENES Y FRASES
+    # --------------------------------------------------
+
+    phrases = [
+        "GRACIAS POR PASAR TIEMPO CONMIGO HERMOSA.",
+        "NUNCA TE DESAPARZCAS DE MI VIDA.",
+        "TE RE QUIERO MUCHISIMO.",
+        "ME GUSTA TU FORMA DE SER HERMOSA NUNCA CAMBIES."
+    ]
+
+    img_size = min(210, max(100, W // 3 - 10))
+    large_size = min(320, int(W * 0.72))
+    margin = 12
+
+    positions = [
+        (margin, int(H * 0.18)),
+        (max(margin, W - img_size - margin), int(H * 0.18)),
+        (margin, int(H * 0.55)),
+        (max(margin, W - img_size - margin), int(H * 0.55))
+    ]
+
+    floating_images = []
+
+    for idx, nombre in enumerate(nombres_imagenes):
+        ruta = os.path.join(folder_path, nombre)
+
+        if not os.path.isfile(ruta):
+            print("Imagen no encontrada:", ruta)
+            continue
+
+        try:
+            original = pygame.image.load(ruta).convert()
+
+            thumb = pygame.transform.smoothscale(
+                original, (img_size, img_size)
+            )
+
+            large = pygame.transform.smoothscale(
+                original, (large_size, large_size)
+            )
+
+            x, y = positions[idx]
+
+            floating_images.append({
+                "thumb": thumb,
+                "large": large,
+                "phrase": phrases[idx],
+                "rect": pygame.Rect(x, y, img_size, img_size)
+            })
+
+            print("Imagen cargada:", nombre)
+
+        except Exception as e:
+            print("Error cargando imagen:", nombre, repr(e))
+
+    # --------------------------------------------------
+    # LLUVIA DIGITAL
+    # --------------------------------------------------
+
+    columns = []
+    spacing = max(12, int(W / 75))
+    char_size = max(10, int(min(W, H) * 0.018))
+
+    for x in range(0, W, spacing):
+        columns.append({
+            "x": x,
+            "y": random.randint(-H, H),
+            "speed": random.uniform(1.5, 5.0),
+            "length": random.randint(4, 12),
+            "char_size": char_size
+        })
+
+    chars = "01アイウエオカキクケコサシスセソタチツテト"
+
+    clock = pygame.time.Clock()
+    anim_time = 0.0
+    selected_image = None
+    running = True
+
+    # --------------------------------------------------
+    # ANIMACION PRINCIPAL
+    # --------------------------------------------------
+
+    while running:
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                running = False
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                    running = False
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if selected_image is not None:
+                    selected_image = None
+                else:
+                    for img in floating_images:
+                        if img["rect"].collidepoint(event.pos):
+                            selected_image = img
+                            break
+
+        screen.fill(BLACK)
+
+        # Lluvia digital
+        for col in columns:
+            x = col["x"]
+            head_y = int(col["y"])
+
+            for j in range(col["length"]):
+                yy = head_y - j * col["char_size"]
+
+                if -col["char_size"] < yy < H:
+                    ch = random.choice(chars)
+
+                    if j == 0:
+                        color = RAIN_BRIGHT
+                    else:
+                        fade = max(35, 175 - j * 10)
+                        color = (
+                            fade,
+                            10,
+                            max(20, int(fade * 0.35))
+                        )
+
+                    glyph = rain_font.render(ch, True, color)
+                    screen.blit(glyph, (x, yy))
+
+            col["y"] += col["speed"]
+
+            if col["y"] - col["length"] * col["char_size"] > H:
+                col["y"] = random.randint(-H // 2, 0)
+                col["speed"] = random.uniform(1.5, 5.0)
+                col["length"] = random.randint(4, 12)
+
+        # Corazón giratorio de frases
+        anim_time += 0.006
+
+        for i in range(50):
+            t = i * (2 * math.pi / 50) + anim_time
+
+            hx = 16 * math.sin(t) ** 3
+            hy = (
+                13 * math.cos(t)
+                - 5 * math.cos(2 * t)
+                - 2 * math.cos(3 * t)
+                - math.cos(4 * t)
+            )
+
+            px = int(cx + hx * heart_size / 16)
+            py = int(cy - hy * heart_size / 16)
+
+            tint = random.choice([
+                (255, 80, 165),
+                (255, 105, 185),
+                (220, 55, 145),
+                (255, 130, 200)
+            ])
+
+            surf = phrase_font.render("I LOVE YOU", True, tint)
+
+            screen.blit(
+                surf,
+                (
+                    px - surf.get_width() // 2,
+                    py - surf.get_height() // 2
+                )
+            )
+
+        # Fotografías
+        for img in floating_images:
+            screen.blit(img["thumb"], img["rect"].topleft)
+
+        # Nombre central
+        name = erika_font.render("ERIKA", True, (255, 120, 200))
+
+        screen.blit(
+            name,
+            (
+                int(cx) - name.get_width() // 2,
+                int(cy) - name.get_height() // 2
+            )
+        )
+
+        # Ventana de fotografía y frase
+        if selected_image:
+            overlay = pygame.Surface((W, H), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 210))
+            screen.blit(overlay, (0, 0))
+
+            card_w = int(W * 0.90)
+            large = selected_image["large"]
+
+            words = selected_image["phrase"].split()
+            lines = []
+            current = ""
+
+            for word in words:
+                test = current + " " + word if current else word
+
+                if popup_font.size(test)[0] <= card_w - 24:
+                    current = test
+                else:
+                    if current:
+                        lines.append(current)
+                    current = word
+
+            if current:
+                lines.append(current)
+
+            line_h = popup_font.get_linesize() + 3
+
+            # Reducir imagen para que quepa en pantalla
+            max_img_h = max(100, H - len(lines) * line_h - 100)
+            ratio = min(1.0, max_img_h / large.get_height())
+
+            if ratio < 1.0:
+                large = pygame.transform.smoothscale(
+                    large,
+                    (
+                        max(1, int(large.get_width() * ratio)),
+                        max(1, int(large.get_height() * ratio))
+                    )
+                )
+
+            card_h = 16 + large.get_height() + 12 + len(lines) * line_h + 36
+            card_x = (W - card_w) // 2
+            card_y = max(10, (H - card_h) // 2)
+
+            pygame.draw.rect(
+                screen, (25, 25, 35),
+                (card_x, card_y, card_w, card_h),
+                border_radius=15
+            )
+
+            pygame.draw.rect(
+                screen, PINK,
+                (card_x, card_y, card_w, card_h),
+                2, border_radius=15
+            )
+
+            img_x = card_x + (card_w - large.get_width()) // 2
+            img_y = card_y + 16
+            screen.blit(large, (img_x, img_y))
+
+            text_y = img_y + large.get_height() + 10
+
+            for line in lines:
+                text = popup_font.render(line, True, (255, 210, 235))
+                screen.blit(
+                    text,
+                    (card_x + (card_w - text.get_width()) // 2, text_y)
+                )
+                text_y += line_h
+
+            close = phrase_font.render(
+                "[ Toca para continuar ]", True, (200, 200, 200)
+            )
+
+            screen.blit(
+                close,
+                ((W - close.get_width()) // 2, card_y + card_h - 25)
+            )
+
+        pygame.display.flip()
+        clock.tick(30)
+
+    # Detener música al salir
+    try:
+        pygame.mixer.music.stop()
+        pygame.mixer.quit()
+    except Exception:
+        pass
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print("ERROR DETECTADO:", repr(e))
+
+        try:
+            pygame.quit()
+        except Exception:
+            pass

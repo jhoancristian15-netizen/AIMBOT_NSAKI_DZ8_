@@ -19,11 +19,18 @@ local ESP = false
 local Aimbot = false
 local XRay = false
 local Noclip = false
-local Invisible = false -- NUEVA OPCIÓN
+local Invisible = false
+local BringAll = false        -- Bring Players / TP All
+local BringNPCs = false       -- Incluir NPCs y dummies
+local AnchorBring = false     -- Anclar los traídos
 
 local FOV_MIN = 50
 local FOV_MAX = 300
 local FOVRadius = 150
+
+local BRING_DISTANCE = 500    -- Distancia máxima para atraer
+local BRING_SPACING = 3.2     -- Separación entre enemigos
+local BRING_OFFSET = 8        -- Studs enfrente de ti
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -37,8 +44,8 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(350,480)
-main.Position = UDim2.new(0.5,-175,0.5,-240)
+main.Size = UDim2.fromOffset(350,505)
+main.Position = UDim2.new(0.5,-175,0.5,-252)
 main.BackgroundColor3 = Color3.fromRGB(0,0,0)
 main.BackgroundTransparency = 0.15
 main.BorderSizePixel = 0
@@ -123,38 +130,41 @@ close.Parent = main
 --==============================
 
 local function createButton(text,y)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(1,-30,0,40)
-	button.Position = UDim2.fromOffset(15,y)
-	button.BackgroundColor3 = Color3.fromRGB(30,0,0)
-	button.BackgroundTransparency = 0.3
-	button.BorderSizePixel = 0
-	button.Text = text
-	button.TextColor3 = Color3.new(1,0.8,0.8)
-	button.TextSize = 14
-	button.Font = Enum.Font.GothamSemibold
-	button.Parent = main
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1,-30,0,40)
+        button.Position = UDim2.fromOffset(15,y)
+        button.BackgroundColor3 = Color3.fromRGB(30,0,0)
+        button.BackgroundTransparency = 0.3
+        button.BorderSizePixel = 0
+        button.Text = text
+        button.TextColor3 = Color3.new(1,0.8,0.8)
+        button.TextSize = 14
+        button.Font = Enum.Font.GothamSemibold
+        button.Parent = main
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0,8)
-	corner.Parent = button
-	
-	-- Efecto hover
-	button.MouseEnter:Connect(function()
-		button.BackgroundColor3 = Color3.fromRGB(60,0,0)
-	end)
-	button.MouseLeave:Connect(function()
-		button.BackgroundColor3 = Color3.fromRGB(30,0,0)
-	end)
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0,8)
+        corner.Parent = button
 
-	return button
+        -- Efecto hover
+        button.MouseEnter:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(60,0,0)
+        end)
+        button.MouseLeave:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(30,0,0)
+        end)
+
+        return button
 end
 
-local aimbotButton = createButton("🎯 Aimbot: OFF",90)
-local espButton = createButton("👁️ ESP Rainbow: OFF",140)
-local xrayButton = createButton("👻 X-Ray: OFF",190)
-local noclipButton = createButton("💨 Noclip: OFF",240)
-local invisibleButton = createButton("🌀 Invisible: OFF",290)
+local aimbotButton = createButton("🎯 Aimbot: OFF",85)
+local espButton = createButton("👁️ ESP Rainbow: OFF",128)
+local xrayButton = createButton("👻 X-Ray: OFF",171)
+local noclipButton = createButton("💨 Noclip: OFF",214)
+local invisibleButton = createButton("🌀 Invisible: OFF",257)
+local bringButton = createButton("🧲 Traer Enemigos: OFF",300)
+local npcButton = createButton("🤖 Incluir NPCs: OFF",343)
+local anchorButton = createButton("🔒 Anclar Traídos: OFF",386)
 
 --==============================
 -- FOV TEXTO
@@ -162,7 +172,7 @@ local invisibleButton = createButton("🌀 Invisible: OFF",290)
 
 local fovText = Instance.new("TextLabel")
 fovText.Size = UDim2.new(1,-30,0,25)
-fovText.Position = UDim2.fromOffset(15,345)
+fovText.Position = UDim2.fromOffset(15,436)
 fovText.BackgroundTransparency = 1
 fovText.Text = "🎯 FOV: 150"
 fovText.TextColor3 = Color3.new(1,0.5,0.5)
@@ -177,7 +187,7 @@ fovText.Parent = main
 
 local slider = Instance.new("Frame")
 slider.Size = UDim2.new(1,-30,0,8)
-slider.Position = UDim2.fromOffset(15,378)
+slider.Position = UDim2.fromOffset(15,468)
 slider.BackgroundColor3 = Color3.fromRGB(60,0,0)
 slider.BorderSizePixel = 0
 slider.Parent = main
@@ -235,14 +245,14 @@ circleStroke.Parent = fovCircle
 --==============================
 
 local function updateFOV()
-	fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
-	fovCircle.Position = UDim2.fromScale(0.5,0.5)
-	fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
-	fovText.Text = "🎯 FOV: "..tostring(FOVRadius)
+        fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
+        fovCircle.Position = UDim2.fromScale(0.5,0.5)
+        fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
+        fovText.Text = "🎯 FOV: "..tostring(FOVRadius)
 
-	local percent = (FOVRadius-FOV_MIN) / (FOV_MAX-FOV_MIN)
-	knob.Position = UDim2.new(percent, 0, 0.5, 0)
-	sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+        local percent = (FOVRadius-FOV_MIN) / (FOV_MAX-FOV_MIN)
+        knob.Position = UDim2.new(percent, 0, 0.5, 0)
+        sliderFill.Size = UDim2.new(percent, 0, 1, 0)
 end
 
 updateFOV()
@@ -254,41 +264,41 @@ updateFOV()
 local draggingFOV = false
 
 local function changeFOV(x)
-	local left = slider.AbsolutePosition.X
-	local width = slider.AbsoluteSize.X
-	if width <= 0 then return end
+        local left = slider.AbsolutePosition.X
+        local width = slider.AbsoluteSize.X
+        if width <= 0 then return end
 
-	local percent = math.clamp((x-left)/width, 0, 1)
-	FOVRadius = math.floor(FOV_MIN + percent * (FOV_MAX-FOV_MIN))
-	updateFOV()
+        local percent = math.clamp((x-left)/width, 0, 1)
+        FOVRadius = math.floor(FOV_MIN + percent * (FOV_MAX-FOV_MIN))
+        updateFOV()
 end
 
 slider.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingFOV = true
-		changeFOV(input.Position.X)
-	end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                draggingFOV = true
+                changeFOV(input.Position.X)
+        end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if not draggingFOV then return end
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		changeFOV(input.Position.X)
-	end
+        if not draggingFOV then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                changeFOV(input.Position.X)
+        end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingFOV = false
-	end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                draggingFOV = false
+        end
 end)
 
 -- Mantener el círculo en el centro
 RunService.RenderStepped:Connect(function()
-	if fovCircle then
-		fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
-		fovCircle.Position = UDim2.fromScale(0.5,0.5)
-	end
+        if fovCircle then
+                fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
+                fovCircle.Position = UDim2.fromScale(0.5,0.5)
+        end
 end)
 
 --==============================
@@ -296,100 +306,100 @@ end)
 --==============================
 
 local function removeESP(character)
-	if not character then return end
-	local old = character:FindFirstChild(ESP_NAME)
-	if old then old:Destroy() end
+        if not character then return end
+        local old = character:FindFirstChild(ESP_NAME)
+        if old then old:Destroy() end
 end
 
 local function addESP(character)
-	if not ESP then return end
-	if not character then return end
-	if character == player.Character then return end
+        if not ESP then return end
+        if not character then return end
+        if character == player.Character then return end
 
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		humanoid = character:WaitForChild("Humanoid", 5)
-	end
-	if not humanoid then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then
+                humanoid = character:WaitForChild("Humanoid", 5)
+        end
+        if not humanoid then return end
 
-	removeESP(character)
+        removeESP(character)
 
-	local highlight = Instance.new("Highlight")
-	highlight.Name = ESP_NAME
-	highlight.Adornee = character
-	highlight.Enabled = true
-	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	highlight.FillTransparency = 0.4
-	highlight.OutlineTransparency = 0
-	highlight.Parent = character
-	
-	-- Color inicial
-	highlight.FillColor = Color3.fromHSV(0, 1, 1)
-	highlight.OutlineColor = Color3.fromHSV(0.5, 1, 1)
-	
-	return highlight
+        local highlight = Instance.new("Highlight")
+        highlight.Name = ESP_NAME
+        highlight.Adornee = character
+        highlight.Enabled = true
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.FillTransparency = 0.4
+        highlight.OutlineTransparency = 0
+        highlight.Parent = character
+
+        -- Color inicial
+        highlight.FillColor = Color3.fromHSV(0, 1, 1)
+        highlight.OutlineColor = Color3.fromHSV(0.5, 1, 1)
+
+        return highlight
 end
 
 -- Función para actualizar colores rainbow
 local function updateRainbowColors()
-	if not ESP then return end
-	
-	local hue = (tick() * 0.2) % 1
-	
-	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= player and plr.Character then
-			local highlight = plr.Character:FindFirstChild(ESP_NAME)
-			if highlight and highlight:IsA("Highlight") then
-				highlight.FillColor = Color3.fromHSV(hue, 1, 1)
-				highlight.OutlineColor = Color3.fromHSV((hue + 0.5) % 1, 1, 1)
-			end
-		end
-	end
+        if not ESP then return end
+
+        local hue = (tick() * 0.2) % 1
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local highlight = plr.Character:FindFirstChild(ESP_NAME)
+                        if highlight and highlight:IsA("Highlight") then
+                                highlight.FillColor = Color3.fromHSV(hue, 1, 1)
+                                highlight.OutlineColor = Color3.fromHSV((hue + 0.5) % 1, 1, 1)
+                        end
+                end
+        end
 end
 
 local function updateESP()
-	for _,plr in ipairs(Players:GetPlayers()) do
-		if plr ~= player then
-			if ESP then
-				if plr.Character then
-					addESP(plr.Character)
-				end
-			else
-				removeESP(plr.Character)
-			end
-		end
-	end
+        for _,plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player then
+                        if ESP then
+                                if plr.Character then
+                                        addESP(plr.Character)
+                                end
+                        else
+                                removeESP(plr.Character)
+                        end
+                end
+        end
 end
 
 local function setupESPPlayer(plr)
-	if plr == player then return end
+        if plr == player then return end
 
-	plr.CharacterAdded:Connect(function(character)
-		character:WaitForChild("Humanoid", 5)
-		task.wait(0.2)
-		if ESP then
-			addESP(character)
-		end
-	end)
+        plr.CharacterAdded:Connect(function(character)
+                character:WaitForChild("Humanoid", 5)
+                task.wait(0.2)
+                if ESP then
+                        addESP(character)
+                end
+        end)
 
-	if ESP and plr.Character then
-		addESP(plr.Character)
-	end
+        if ESP and plr.Character then
+                addESP(plr.Character)
+        end
 end
 
 for _,plr in ipairs(Players:GetPlayers()) do
-	setupESPPlayer(plr)
+        setupESPPlayer(plr)
 end
 
 Players.PlayerAdded:Connect(setupESPPlayer)
 
 Players.PlayerRemoving:Connect(function(plr)
-	removeESP(plr.Character)
+        removeESP(plr.Character)
 end)
 
 -- Loop para actualizar colores rainbow
 RunService.RenderStepped:Connect(function()
-	updateRainbowColors()
+        updateRainbowColors()
 end)
 
 --==============================
@@ -397,60 +407,64 @@ end)
 --==============================
 
 local function setInvisible()
-	if not Invisible then return end
-	
-	local character = player.Character
-	if not character then return end
-	
-	for _, part in ipairs(character:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.Transparency = 1
-			part.CanCollide = false
-		end
-		
-		-- Ocultar accesorios
-		if part:IsA("Accessory") or part:IsA("Hat") then
-			part.Handle.Transparency = 1
-		end
-		
-		-- Ocultar ropa
-		if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
-			part.Transparency = 1
-		end
-	end
-	
-	-- Ocultar humanoid
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid.BreakJointsOnDeath = false
-	end
+        if not Invisible then return end
+
+        local character = player.Character
+        if not character then return end
+
+        for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                        part.Transparency = 1
+                        part.CanCollide = false
+                end
+
+                -- Ocultar accesorios
+                if part:IsA("Accessory") or part:IsA("Hat") then
+                        if part:FindFirstChild("Handle") then
+                                part.Handle.Transparency = 1
+                        end
+                end
+
+                -- Ocultar ropa
+                if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
+                        part.Transparency = 1
+                end
+        end
+
+        -- Ocultar humanoid
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+                humanoid.BreakJointsOnDeath = false
+        end
 end
 
 local function setVisible()
-	local character = player.Character
-	if not character then return end
-	
-	for _, part in ipairs(character:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.Transparency = 0
-			part.CanCollide = true
-		end
-		
-		if part:IsA("Accessory") or part:IsA("Hat") then
-			part.Handle.Transparency = 0
-		end
-		
-		if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
-			part.Transparency = 0
-		end
-	end
+        local character = player.Character
+        if not character then return end
+
+        for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                        part.Transparency = 0
+                        part.CanCollide = true
+                end
+
+                if part:IsA("Accessory") or part:IsA("Hat") then
+                        if part:FindFirstChild("Handle") then
+                                part.Handle.Transparency = 0
+                        end
+                end
+
+                if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
+                        part.Transparency = 0
+                end
+        end
 end
 
 -- Aplicar invisibilidad constantemente
 RunService.RenderStepped:Connect(function()
-	if Invisible then
-		setInvisible()
-	end
+        if Invisible then
+                setInvisible()
+        end
 end)
 
 --==============================
@@ -458,16 +472,16 @@ end)
 --==============================
 
 RunService.Stepped:Connect(function()
-	if not Noclip then return end
+        if not Noclip then return end
 
-	local character = player.Character
-	if not character then return end
+        local character = player.Character
+        if not character then return end
 
-	for _,part in ipairs(character:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.CanCollide = false
-		end
-	end
+        for _,part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                        part.CanCollide = false
+                end
+        end
 end)
 
 --==============================
@@ -475,46 +489,46 @@ end)
 --==============================
 
 local function getClosestHead()
-	camera = workspace.CurrentCamera
-	if not camera then return nil end
+        camera = workspace.CurrentCamera
+        if not camera then return nil end
 
-	local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
-	local closest = nil
-	local closestDistance = FOVRadius
+        local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+        local closest = nil
+        local closestDistance = FOVRadius
 
-	for _,plr in ipairs(Players:GetPlayers()) do
-		if plr ~= player then
-			local character = plr.Character
-			if character then
-				local humanoid = character:FindFirstChildOfClass("Humanoid")
-				local head = character:FindFirstChild("Head")
-				if humanoid and head and humanoid.Health > 0 then
-					local pos, visible = camera:WorldToViewportPoint(head.Position)
-					if visible and pos.Z > 0 then
-						local distance = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-						if distance < closestDistance then
-							closestDistance = distance
-							closest = head
-						end
-					end
-				end
-			end
-		end
-	end
+        for _,plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player then
+                        local character = plr.Character
+                        if character then
+                                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                                local head = character:FindFirstChild("Head")
+                                if humanoid and head and humanoid.Health > 0 then
+                                        local pos, visible = camera:WorldToViewportPoint(head.Position)
+                                        if visible and pos.Z > 0 then
+                                                local distance = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                                                if distance < closestDistance then
+                                                        closestDistance = distance
+                                                        closest = head
+                                                end
+                                        end
+                                end
+                        end
+                end
+        end
 
-	return closest
+        return closest
 end
 
 RunService.RenderStepped:Connect(function()
-	if not Aimbot then return end
+        if not Aimbot then return end
 
-	camera = workspace.CurrentCamera
-	if not camera then return end
+        camera = workspace.CurrentCamera
+        if not camera then return end
 
-	local head = getClosestHead()
-	if head then
-		camera.CFrame = CFrame.lookAt(camera.CFrame.Position, head.Position)
-	end
+        local head = getClosestHead()
+        if head then
+                camera.CFrame = CFrame.lookAt(camera.CFrame.Position, head.Position)
+        end
 end)
 
 --==============================
@@ -524,97 +538,88 @@ end)
 local xrayParts = {}
 
 local function enableXRay()
-	for _,object in ipairs(workspace:GetDescendants()) do
-		if object:IsA("BasePart") then
-			local character = player.Character
-			if not character or not object:IsDescendantOf(character) then
-				if xrayParts[object] == nil then
-					xrayParts[object] = object.LocalTransparencyModifier
-				end
-				object.LocalTransparencyModifier = 0.65
-			end
-		end
-	end
+        for _,object in ipairs(workspace:GetDescendants()) do
+                if object:IsA("BasePart") then
+                        local character = player.Character
+                        if not character or not object:IsDescendantOf(character) then
+                                if xrayParts[object] == nil then
+                                        xrayParts[object] = object.LocalTransparencyModifier
+                                end
+                                object.LocalTransparencyModifier = 0.65
+                        end
+                end
+        end
 end
 
 local function disableXRay()
-	for object,value in pairs(xrayParts) do
-		if object and object.Parent then
-			object.LocalTransparencyModifier = value
-		end
-	end
-	table.clear(xrayParts)
+        for object,value in pairs(xrayParts) do
+                if object and object.Parent then
+                        object.LocalTransparencyModifier = value
+                end
+        end
+        table.clear(xrayParts)
 end
 
-xrayButton.Activated:Connect(function()
-	XRay = not XRay
-	xrayButton.Text = XRay and "👻 X-Ray: ON" or "👻 X-Ray: OFF"
-	if XRay then
-		enableXRay()
-	else
-		disableXRay()
-	end
-end)
-
 --==============================
--- BOTONES
+-- BRING PLAYERS (TRAER ENEMIGOS)
 --==============================
 
-espButton.Activated:Connect(function()
-	ESP = not ESP
-	espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
-	updateESP()
-end)
+-- Busca NPCs / dummies (modelos con Humanoid que no sean jugadores)
+local function scanNPCs()
+        local found = {}
 
-aimbotButton.Activated:Connect(function()
-	Aimbot = not Aimbot
-	aimbotButton.Text = Aimbot and "🎯 Aimbot: ON" or "🎯 Aimbot: OFF"
-end)
+        local function scan(container, depth)
+                if depth > 2 then return end
+                for _, obj in ipairs(container:GetChildren()) do
+                        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+                                if not Players:GetPlayerFromCharacter(obj) and obj ~= player.Character then
+                                        local hum = obj:FindFirstChildOfClass("Humanoid")
+                                        if hum and hum.Health > 0 then
+                                                table.insert(found, obj)
+                                        end
+                                end
+                        elseif obj:IsA("Folder") or obj:IsA("Model") then
+                                scan(obj, depth + 1)
+                        end
+                end
+        end
 
-noclipButton.Activated:Connect(function()
-	Noclip = not Noclip
-	noclipButton.Text = Noclip and "💨 Noclip: ON" or "💨 Noclip: OFF"
-end)
+        scan(workspace, 0)
+        return found
+end
 
-invisibleButton.Activated:Connect(function()
-	Invisible = not Invisible
-	invisibleButton.Text = Invisible and "🌀 Invisible: ON" or "🌀 Invisible: OFF"
-	
-	if not Invisible then
-		setVisible()
-	end
-end)
+local function collectTargets()
+        local targets = {}
 
---==============================
--- ABRIR / CERRAR
---==============================
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.Health > 0 then
+                                table.insert(targets, plr.Character)
+                        end
+                end
+        end
 
-local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.fromOffset(60,60)
-openButton.Position = UDim2.new(0,15,0.5,-30)
-openButton.Text = "🔥"
-openButton.TextSize = 30
-openButton.Font = Enum.Font.GothamBold
-openButton.TextColor3 = Color3.new(1,0.3,0)
-openButton.BackgroundColor3 = Color3.fromRGB(20,0,0)
-openButton.BackgroundTransparency = 0.3
-openButton.Visible = false
-openButton.Parent = gui
+        if BringNPCs then
+                for _, npc in ipairs(scanNPCs()) do
+                        if npc.PrimaryPart or npc:FindFirstChild("HumanoidRootPart") then
+                                table.insert(targets, npc)
+                        end
+                end
+        end
 
-local openCorner = Instance.new("UICorner")
-openCorner.CornerRadius = UDim.new(1,0)
-openCorner.Parent = openButton
+        return targets
+end
 
-close.Activated:Connect(function()
-	main.Visible = false
-	openButton.Visible = true
-end)
+local function bringTargets()
+        local character = player.Character
+        if not character then return end
 
-openButton.Activated:Connect(function()
-	main.Visible = true
-	openButton.Visible = false
-end)
+        local myHRP = character:FindFirstChild("HumanoidRootPart")
+        if not myHRP then return end
 
-print("🔥 NSAKI_DZ8 - Demon Edition cargado")
-print("👿 ESP Rainbow activo - Colores cambiantes")
-print("🌀 Invisibilidad agregada")
+        local origin = myHRP.Position
+        local look = myHRP.CFrame.LookVector
+        local right = myHRP.CFrame.RightVector
+ 

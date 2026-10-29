@@ -1,5 +1,5 @@
 --==================================================
--- NSAKI_DZ8
+-- NSAKI_DZ8  |  PARTE 1 DE 3
 -- LocalScript
 -- StarterPlayer > StarterPlayerScripts
 --==================================================
@@ -300,6 +300,9 @@ RunService.RenderStepped:Connect(function()
                 fovCircle.Position = UDim2.fromScale(0.5,0.5)
         end
 end)
+--==================================================
+-- NSAKI_DZ8  |  PARTE 2 DE 3
+--==================================================
 
 --==============================
 -- ESP RAINBOW
@@ -559,6 +562,9 @@ local function disableXRay()
         end
         table.clear(xrayParts)
 end
+--==================================================
+-- NSAKI_DZ8  |  PARTE 3 DE 3
+--==================================================
 
 --==============================
 -- BRING PLAYERS (TRAER ENEMIGOS)
@@ -622,4 +628,151 @@ local function bringTargets()
         local origin = myHRP.Position
         local look = myHRP.CFrame.LookVector
         local right = myHRP.CFrame.RightVector
- 
+        local basePos = origin + look * BRING_OFFSET
+
+        local placed = 0
+
+        for _, target in ipairs(collectTargets()) do
+                local hrp = target.PrimaryPart or target:FindFirstChild("HumanoidRootPart")
+                if hrp and (hrp.Position - origin).Magnitude <= BRING_DISTANCE then
+                        local col = (placed % 3) - 1
+                        local row = math.floor(placed / 3)
+
+                        local pos = basePos + right * (col * BRING_SPACING) - look * (row * BRING_SPACING)
+                        pos = Vector3.new(pos.X, origin.Y + 2, pos.Z)
+
+                        target:PivotTo(CFrame.lookAt(pos, Vector3.new(origin.X, pos.Y, origin.Z)))
+
+                        if AnchorBring then
+                                hrp.Anchored = true
+                        else
+                                hrp.Anchored = false
+                        end
+
+                        placed = placed + 1
+                end
+        end
+end
+
+task.spawn(function()
+        while true do
+                if BringAll then
+                        bringTargets()
+                        task.wait(0.2)
+                else
+                        task.wait(0.1)
+                end
+        end
+end)
+
+--==============================
+-- BOTONES
+--==============================
+
+espButton.Activated:Connect(function()
+        ESP = not ESP
+        espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
+        updateESP()
+end)
+
+aimbotButton.Activated:Connect(function()
+        Aimbot = not Aimbot
+        aimbotButton.Text = Aimbot and "🎯 Aimbot: ON" or "🎯 Aimbot: OFF"
+end)
+
+noclipButton.Activated:Connect(function()
+        Noclip = not Noclip
+        noclipButton.Text = Noclip and "💨 Noclip: ON" or "💨 Noclip: OFF"
+end)
+
+invisibleButton.Activated:Connect(function()
+        Invisible = not Invisible
+        invisibleButton.Text = Invisible and "🌀 Invisible: ON" or "🌀 Invisible: OFF"
+
+        if not Invisible then
+                setVisible()
+        end
+end)
+
+xrayButton.Activated:Connect(function()
+        XRay = not XRay
+        xrayButton.Text = XRay and "👻 X-Ray: ON" or "👻 X-Ray: OFF"
+        if XRay then
+                enableXRay()
+        else
+                disableXRay()
+        end
+end)
+
+bringButton.Activated:Connect(function()
+        BringAll = not BringAll
+        bringButton.Text = BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"
+
+        if BringAll then
+                bringTargets()
+        else
+                -- Soltar el anclaje al apagar
+                if AnchorBring then
+                        for _, plr in ipairs(Players:GetPlayers()) do
+                                if plr ~= player and plr.Character then
+                                        local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                                        if hrp then hrp.Anchored = false end
+                                end
+                        end
+                end
+        end
+end)
+
+npcButton.Activated:Connect(function()
+        BringNPCs = not BringNPCs
+        npcButton.Text = BringNPCs and "🤖 Incluir NPCs: ON" or "🤖 Incluir NPCs: OFF"
+end)
+
+anchorButton.Activated:Connect(function()
+        AnchorBring = not AnchorBring
+        anchorButton.Text = AnchorBring and "🔒 Anclar Traídos: ON" or "🔒 Anclar Traídos: OFF"
+
+        if not AnchorBring then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                        if plr ~= player and plr.Character then
+                                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                                if hrp then hrp.Anchored = false end
+                        end
+                end
+        end
+end)
+
+--==============================
+-- ABRIR / CERRAR
+--==============================
+
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.fromOffset(60,60)
+openButton.Position = UDim2.new(0,15,0.5,-30)
+openButton.Text = "🔥"
+openButton.TextSize = 30
+openButton.Font = Enum.Font.GothamBold
+openButton.TextColor3 = Color3.new(1,0.3,0)
+openButton.BackgroundColor3 = Color3.fromRGB(20,0,0)
+openButton.BackgroundTransparency = 0.3
+openButton.Visible = false
+openButton.Parent = gui
+
+local openCorner = Instance.new("UICorner")
+openCorner.CornerRadius = UDim.new(1,0)
+openCorner.Parent = openButton
+
+close.Activated:Connect(function()
+        main.Visible = false
+        openButton.Visible = true
+end)
+
+openButton.Activated:Connect(function()
+        main.Visible = true
+        openButton.Visible = false
+end)
+
+print("🔥 NSAKI_DZ8 - Demon Edition cargado")
+print("👿 ESP Rainbow activo - Colores cambiantes")
+print("🌀 Invisibilidad agregada")
+print("🧲 Bring Players agregado - Enemigos enfrente de ti")

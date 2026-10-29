@@ -20,20 +20,21 @@ local Aimbot = false
 local XRay = false
 local Noclip = false
 local Invisible = false
-local BringAll = false        -- Bring Players / TP All
-local BringNPCs = false       -- Incluir NPCs y dummies
-local AnchorBring = false     -- Anclar los traídos
-local BulletRedirect = false  -- Silent Aim / Magic Bullet
+local BringAll = false          -- Bring Players / TP All
+local BringNPCs = false         -- Incluir NPCs y dummies
+local AnchorBring = false       -- Anclar los traídos
+local Wallbang = false          -- Balas atraviesan paredes
 
 local FOV_MIN = 50
 local FOV_MAX = 300
 local FOVRadius = 150
 
-local BRING_DISTANCE = 500    -- Distancia máxima para atraer
-local BRING_SPACING = 3.2     -- Separación entre enemigos
-local BRING_OFFSET = 8        -- Studs enfrente de ti
+local BRING_DISTANCE = 500      -- Distancia máxima para atraer
+local BRING_SPACING = 3.2       -- Separación entre enemigos
+local BRING_OFFSET = 8          -- Studs enfrente de ti
 
-local REDIRECT_HOLD = 0.06    -- Cuánto dura el enganche de la cámara al disparar
+local WALLBANG_MAX_WALL = 6     -- Grosor máximo de pared atravesable (studs)
+local WALLBANG_INCLUDE_NPCS = false -- También atravesar paredes hacia NPCs
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -198,7 +199,7 @@ local invisibleButton = createButton("🌀 Invisible: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
-local bulletButton = createButton("🔫 Redirigir Balas: OFF")
+local wallButton = createButton("🧱 Traspasar Paredes: OFF")
 
 --==============================
 -- FOV TEXTO
@@ -605,79 +606,11 @@ end
 --==================================================
 
 --==============================
--- REDIRIGIR BALAS (SILENT AIM)
+-- BUSCAR NPCs (CACHÉ)
 --==============================
 
--- Engancha la cámara al enemigo más cercano dentro del FOV por un instante
-local function snapCamera()
-        local head = getClosestHead()
-        local cam = workspace.CurrentCamera
-        if not head or not cam then return end
+local npcCache = {}
 
-        local saved = cam.CFrame
-        cam.CFrame = CFrame.lookAt(cam.CFrame.Position, head.Position)
-
-        task.delay(REDIRECT_HOLD, function()
-                if cam and cam.Parent then
-                        cam.CFrame = saved
-                end
-        end)
-end
-
--- Hook del rayo de la cámara (solo si el ejecutor lo soporta)
-local originalRay = nil
-
-local function installRayHook()
-        if originalRay then return end
-        if not hookmetamethod then return end
-
-        local ok, original = pcall(hookmetamethod, game, "__namecall", function(self, ...)
-                local method = getnamecallmethod()
-
-                if BulletRedirect and method == "ScreenPointToRay" and self == workspace.CurrentCamera then
-                        local head = getClosestHead()
-                        if head then
-                                local origin = workspace.CurrentCamera.CFrame.Position
-                                return Ray.new(origin, (head.Position - origin).Unit * 2000)
-                        end
-                end
-
-                return originalRay(self, ...)
-        end)
-
-        if ok then
-                originalRay = original
-        end
-end
-
-task.spawn(installRayHook)
-
--- No disparar el redirigido cuando se toca el panel
-local function overPanel(pos)
-        local objs = player.PlayerGui:GetGuiObjectsAtPosition(pos.X, pos.Y)
-        for _, o in ipairs(objs) do
-                if o:IsDescendantOf(main) then return true end
-        end
-        return false
-end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-        if not BulletRedirect then return end
-
-        local isClick = input.UserInputType == Enum.UserInputType.MouseButton1
-        local isTouch = input.UserInputType == Enum.UserInputType.Touch
-        if not (isClick or isTouch) then return end
-
-        if isTouch and overPanel(input.Position) then return end
-
-        snapCamera()
-end)
-
---==============================
--- BRING PLAYERS (TRAER ENEMIGOS)
---==============================
-
--- Busca NPCs / dummies (modelos con Humanoid que no sean jugadores)
 local function scanNPCs()
         local found = {}
 
@@ -701,6 +634,159 @@ local function scanNPCs()
         return found
 end
 
+task.spawn(function()
+        while true do
+                if (Wallbang and WALLBANG_INCLUDE_NPCS) or BringNPCs then
+                        npcCache = scanNPCs()
+                end
+                task.wait(1)
+        end
+end)
+
+--==============================
+-- TRASPASAR PAREDES (WALLBANG REAL)
+--==============================
+
+local FILTER_INCLUDE = Enum.RaycastFilterType.Include
+local FILTER_EXCLUDE = Enum.RaycastFilterType.Exclude
+
+local inCast = false
+local oldNamecall = nil
+
+local function characterList()
+        local list = {}
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        if hum and hum.Health > 0 then
+                                table.insert(list, plr.Character)
+                        end
+                end
+        end
+
+        if WALLBANG_INCLUDE_NPCS then
+                for _, npc in ipairs(npcCache) do
+                        if npc.Parent then
+                                table.insert(list, npc)
+                        end
+                end
+        end
+
+        return list
+end
+
+local function makeParams(filterType, list)
+        local params = RaycastParams.new()
+        params.FilterType = filterType
+        params.FilterDescendantsInstances = list
+        params.IgnoreWater = true
+        return params
+end
+
+-- Devuelve el impacto en un personaje aunque haya paredes en medio
+local function wallbangCast(origin, direction)
+        local length = direction.Magnitude
+        if length < 0.1 then return nil end
+
+        local unit = direction.Unit
+        local chars = characterList()
+        if #chars == 0 then return nil end
+
+        -- 1) ¿Hay alguien en la línea? (solo personajes)
+        local charHit = workspace:Raycast(origin, direction, makeParams(FILTER_INCLUDE, chars))
+        if not charHit or not charHit.Instance then return nil end
+
+        local model = charHit.Instance:FindFirstAncestorOfClass("Model")
+        local hum = model and model:FindFirstChildOfClass("Humanoid")
+        if hum and hum.Health <= 0 then return nil end
+
+        local travel = (charHit.Position - origin).Magnitude
+        if travel <= 0.1 then return charHit end
+
+        -- 2) Medir las paredes intermedias y descartar las demasiado gruesas
+        local worldParams = makeParams(FILTER_EXCLUDE, chars)
+        local cursor = origin
+        local used = 0
+
+        for _ = 1, 4 do
+                local remaining = travel - used
+                if remaining <= 0.05 then break end
+
+                local wallHit = workspace:Raycast(cursor, unit * remaining, worldParams)
+                if not wallHit then break end
+
+                local thickList = table.clone(chars)
+                table.insert(thickList, wallHit.Instance)
+                local exitHit = workspace:Raycast(
+                        wallHit.Position + unit * 0.01,
+                        unit * remaining,
+                        makeParams(FILTER_EXCLUDE, thickList)
+                )
+
+                local thickness
+                if exitHit then
+                        thickness = (exitHit.Position - wallHit.Position).Magnitude
+                else
+                        thickness = remaining
+                end
+
+                if thickness > WALLBANG_MAX_WALL then return nil end
+
+                cursor = wallHit.Position + unit * (thickness + 0.02)
+                used = (cursor - origin).Magnitude
+        end
+
+        return charHit
+end
+
+-- Intercepta los raycasts del juego
+local function installWallbangHook()
+        if oldNamecall then return end
+        if not hookmetamethod then return end
+
+        local ok, original = pcall(hookmetamethod, game, "__namecall", function(self, ...)
+                local method = getnamecallmethod()
+
+                if Wallbang and not inCast and self == workspace then
+                        local args = { ... }
+
+                        if method == "Raycast" then
+                                local origin, direction = args[1], args[2]
+                                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
+                                        inCast = true
+                                        local hit = wallbangCast(origin, direction)
+                                        inCast = false
+                                        if hit then return hit end
+                                end
+
+                        elseif method == "FindPartOnRay"
+                                or method == "FindPartOnRayWithIgnoreList"
+                                or method == "FindPartOnRayWithWhitelist" then
+                                local ray = args[1]
+                                if typeof(ray) == "Ray" then
+                                        inCast = true
+                                        local hit = wallbangCast(ray.Origin, ray.Direction)
+                                        inCast = false
+                                        if hit then
+                                                return hit.Instance, hit.Position, hit.Normal, hit.Material
+                                        end
+                                end
+                        end
+                end
+
+                return oldNamecall(self, ...)
+        end)
+
+        if ok then
+                oldNamecall = original
+        end
+end
+
+--==============================
+-- BRING PLAYERS (TRAER ENEMIGOS)
+--==============================
+
 local function collectTargets()
         local targets = {}
 
@@ -715,8 +801,8 @@ local function collectTargets()
         end
 
         if BringNPCs then
-                for _, npc in ipairs(scanNPCs()) do
-                        if npc.PrimaryPart or npc:FindFirstChild("HumanoidRootPart") then
+                for _, npc in ipairs(npcCache) do
+                        if npc.Parent and (npc.PrimaryPart or npc:FindFirstChild("HumanoidRootPart")) then
                                 table.insert(targets, npc)
                         end
                 end
@@ -811,11 +897,13 @@ xrayButton.Activated:Connect(function()
         end
 end)
 
-bulletButton.Activated:Connect(function()
-        BulletRedirect = not BulletRedirect
-        bulletButton.Text = BulletRedirect and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"
-        if BulletRedirect then
-                installRayHook()
+wallButton.Activated:Connect(function()
+        Wallbang = not Wallbang
+        wallButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
+
+        if Wallbang then
+                installWallbangHook()
+                npcCache = scanNPCs()
         end
 end)
 
@@ -841,6 +929,7 @@ end)
 npcButton.Activated:Connect(function()
         BringNPCs = not BringNPCs
         npcButton.Text = BringNPCs and "🤖 Incluir NPCs: ON" or "🤖 Incluir NPCs: OFF"
+        npcCache = scanNPCs()
 end)
 
 anchorButton.Activated:Connect(function()
@@ -891,4 +980,4 @@ print("🔥 NSAKI_DZ8 - Demon Edition cargado")
 print("👿 ESP Rainbow activo - Colores cambiantes")
 print("🌀 Invisibilidad agregada")
 print("🧲 Bring Players agregado - Enemigos enfrente de ti")
-print("🔫 Redirigir Balas agregado - Silent Aim dentro del FOV")
+print("🧱 Wallbang agregado - Balas atraviesan paredes reales")

@@ -23,6 +23,7 @@ local Invisible = false
 local BringAll = false        -- Bring Players / TP All
 local BringNPCs = false       -- Incluir NPCs y dummies
 local AnchorBring = false     -- Anclar los traídos
+local BulletRedirect = false  -- Silent Aim / Magic Bullet
 
 local FOV_MIN = 50
 local FOV_MAX = 300
@@ -31,6 +32,8 @@ local FOVRadius = 150
 local BRING_DISTANCE = 500    -- Distancia máxima para atraer
 local BRING_SPACING = 3.2     -- Separación entre enemigos
 local BRING_OFFSET = 8        -- Studs enfrente de ti
+
+local REDIRECT_HOLD = 0.06    -- Cuánto dura el enganche de la cámara al disparar
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -44,11 +47,12 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(350,505)
-main.Position = UDim2.new(0.5,-175,0.5,-252)
+main.Size = UDim2.fromOffset(350,520)
+main.Position = UDim2.new(0.5,-175,0.5,-260)
 main.BackgroundColor3 = Color3.fromRGB(0,0,0)
 main.BackgroundTransparency = 0.15
 main.BorderSizePixel = 0
+main.ClipsDescendants = false
 main.Parent = gui
 
 -- FONDO CON IMAGEN (DEMONIO)
@@ -78,31 +82,31 @@ mainCorner.Parent = main
 --==============================
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,-50,0,50)
-title.Position = UDim2.fromOffset(15,10)
+title.Size = UDim2.new(1,-50,0,40)
+title.Position = UDim2.fromOffset(15,6)
 title.BackgroundTransparency = 1
 title.Text = "NSAKI DZ8"
 title.TextColor3 = Color3.new(1,0,0)
-title.TextSize = 28
+title.TextSize = 26
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = main
 
 -- Sombra del título
 local titleShadow = Instance.new("TextLabel")
-titleShadow.Size = UDim2.new(1,-50,0,50)
-titleShadow.Position = UDim2.fromOffset(17,12)
+titleShadow.Size = UDim2.new(1,-50,0,40)
+titleShadow.Position = UDim2.fromOffset(17,8)
 titleShadow.BackgroundTransparency = 1
 titleShadow.Text = "NSAKI DZ8"
 titleShadow.TextColor3 = Color3.new(0.3,0,0)
-titleShadow.TextSize = 28
+titleShadow.TextSize = 26
 titleShadow.Font = Enum.Font.GothamBold
 titleShadow.TextXAlignment = Enum.TextXAlignment.Left
 titleShadow.Parent = main
 
 local creator = Instance.new("TextLabel")
-creator.Size = UDim2.new(1,-30,0,25)
-creator.Position = UDim2.fromOffset(15,55)
+creator.Size = UDim2.new(1,-30,0,20)
+creator.Position = UDim2.fromOffset(15,44)
 creator.BackgroundTransparency = 1
 creator.Text = "⚔️ Demon Edition ⚔️"
 creator.TextColor3 = Color3.fromRGB(200,50,50)
@@ -126,13 +130,42 @@ close.Font = Enum.Font.GothamBold
 close.Parent = main
 
 --==============================
+-- ZONA DESPLAZABLE
+--==============================
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1,0,1,-72)
+scroll.Position = UDim2.fromOffset(0,72)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.CanvasSize = UDim2.new(0,0,0,0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+scroll.ScrollBarThickness = 4
+scroll.ScrollBarImageColor3 = Color3.fromRGB(255,0,0)
+scroll.ScrollBarImageTransparency = 0.25
+scroll.ClipsDescendants = true
+scroll.Parent = main
+
+local scrollPad = Instance.new("UIPadding")
+scrollPad.PaddingLeft = UDim.new(0,15)
+scrollPad.PaddingRight = UDim.new(0,15)
+scrollPad.PaddingTop = UDim.new(0,6)
+scrollPad.PaddingBottom = UDim.new(0,18)
+scrollPad.Parent = scroll
+
+local scrollList = Instance.new("UIListLayout")
+scrollList.Padding = UDim.new(0,6)
+scrollList.SortOrder = Enum.SortOrder.LayoutOrder
+scrollList.Parent = scroll
+
+--==============================
 -- BOTONES
 --==============================
 
-local function createButton(text,y)
+local function createButton(text)
         local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1,-30,0,40)
-        button.Position = UDim2.fromOffset(15,y)
+        button.Size = UDim2.new(1,0,0,40)
         button.BackgroundColor3 = Color3.fromRGB(30,0,0)
         button.BackgroundTransparency = 0.3
         button.BorderSizePixel = 0
@@ -140,7 +173,7 @@ local function createButton(text,y)
         button.TextColor3 = Color3.new(1,0.8,0.8)
         button.TextSize = 14
         button.Font = Enum.Font.GothamSemibold
-        button.Parent = main
+        button.Parent = scroll
 
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0,8)
@@ -157,40 +190,45 @@ local function createButton(text,y)
         return button
 end
 
-local aimbotButton = createButton("🎯 Aimbot: OFF",85)
-local espButton = createButton("👁️ ESP Rainbow: OFF",128)
-local xrayButton = createButton("👻 X-Ray: OFF",171)
-local noclipButton = createButton("💨 Noclip: OFF",214)
-local invisibleButton = createButton("🌀 Invisible: OFF",257)
-local bringButton = createButton("🧲 Traer Enemigos: OFF",300)
-local npcButton = createButton("🤖 Incluir NPCs: OFF",343)
-local anchorButton = createButton("🔒 Anclar Traídos: OFF",386)
+local aimbotButton = createButton("🎯 Aimbot: OFF")
+local espButton = createButton("👁️ ESP Rainbow: OFF")
+local xrayButton = createButton("👻 X-Ray: OFF")
+local noclipButton = createButton("💨 Noclip: OFF")
+local invisibleButton = createButton("🌀 Invisible: OFF")
+local bringButton = createButton("🧲 Traer Enemigos: OFF")
+local npcButton = createButton("🤖 Incluir NPCs: OFF")
+local anchorButton = createButton("🔒 Anclar Traídos: OFF")
+local bulletButton = createButton("🔫 Redirigir Balas: OFF")
 
 --==============================
 -- FOV TEXTO
 --==============================
 
 local fovText = Instance.new("TextLabel")
-fovText.Size = UDim2.new(1,-30,0,25)
-fovText.Position = UDim2.fromOffset(15,436)
+fovText.Size = UDim2.new(1,0,0,22)
 fovText.BackgroundTransparency = 1
 fovText.Text = "🎯 FOV: 150"
 fovText.TextColor3 = Color3.new(1,0.5,0.5)
 fovText.TextSize = 14
 fovText.Font = Enum.Font.GothamSemibold
 fovText.TextXAlignment = Enum.TextXAlignment.Left
-fovText.Parent = main
+fovText.Parent = scroll
 
 --==============================
 -- SLIDER FOV
 --==============================
 
+local sliderHolder = Instance.new("Frame")
+sliderHolder.Size = UDim2.new(1,0,0,20)
+sliderHolder.BackgroundTransparency = 1
+sliderHolder.Parent = scroll
+
 local slider = Instance.new("Frame")
-slider.Size = UDim2.new(1,-30,0,8)
-slider.Position = UDim2.fromOffset(15,468)
+slider.Size = UDim2.new(1,0,0,8)
+slider.Position = UDim2.new(0,0,0.5,-4)
 slider.BackgroundColor3 = Color3.fromRGB(60,0,0)
 slider.BorderSizePixel = 0
-slider.Parent = main
+slider.Parent = sliderHolder
 
 local sliderCorner = Instance.new("UICorner")
 sliderCorner.CornerRadius = UDim.new(1,0)
@@ -567,6 +605,75 @@ end
 --==================================================
 
 --==============================
+-- REDIRIGIR BALAS (SILENT AIM)
+--==============================
+
+-- Engancha la cámara al enemigo más cercano dentro del FOV por un instante
+local function snapCamera()
+        local head = getClosestHead()
+        local cam = workspace.CurrentCamera
+        if not head or not cam then return end
+
+        local saved = cam.CFrame
+        cam.CFrame = CFrame.lookAt(cam.CFrame.Position, head.Position)
+
+        task.delay(REDIRECT_HOLD, function()
+                if cam and cam.Parent then
+                        cam.CFrame = saved
+                end
+        end)
+end
+
+-- Hook del rayo de la cámara (solo si el ejecutor lo soporta)
+local originalRay = nil
+
+local function installRayHook()
+        if originalRay then return end
+        if not hookmetamethod then return end
+
+        local ok, original = pcall(hookmetamethod, game, "__namecall", function(self, ...)
+                local method = getnamecallmethod()
+
+                if BulletRedirect and method == "ScreenPointToRay" and self == workspace.CurrentCamera then
+                        local head = getClosestHead()
+                        if head then
+                                local origin = workspace.CurrentCamera.CFrame.Position
+                                return Ray.new(origin, (head.Position - origin).Unit * 2000)
+                        end
+                end
+
+                return originalRay(self, ...)
+        end)
+
+        if ok then
+                originalRay = original
+        end
+end
+
+task.spawn(installRayHook)
+
+-- No disparar el redirigido cuando se toca el panel
+local function overPanel(pos)
+        local objs = player.PlayerGui:GetGuiObjectsAtPosition(pos.X, pos.Y)
+        for _, o in ipairs(objs) do
+                if o:IsDescendantOf(main) then return true end
+        end
+        return false
+end
+
+UserInputService.InputBegan:Connect(function(input, processed)
+        if not BulletRedirect then return end
+
+        local isClick = input.UserInputType == Enum.UserInputType.MouseButton1
+        local isTouch = input.UserInputType == Enum.UserInputType.Touch
+        if not (isClick or isTouch) then return end
+
+        if isTouch and overPanel(input.Position) then return end
+
+        snapCamera()
+end)
+
+--==============================
 -- BRING PLAYERS (TRAER ENEMIGOS)
 --==============================
 
@@ -704,6 +811,14 @@ xrayButton.Activated:Connect(function()
         end
 end)
 
+bulletButton.Activated:Connect(function()
+        BulletRedirect = not BulletRedirect
+        bulletButton.Text = BulletRedirect and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"
+        if BulletRedirect then
+                installRayHook()
+        end
+end)
+
 bringButton.Activated:Connect(function()
         BringAll = not BringAll
         bringButton.Text = BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"
@@ -776,3 +891,4 @@ print("🔥 NSAKI_DZ8 - Demon Edition cargado")
 print("👿 ESP Rainbow activo - Colores cambiantes")
 print("🌀 Invisibilidad agregada")
 print("🧲 Bring Players agregado - Enemigos enfrente de ti")
+print("🔫 Redirigir Balas agregado - Silent Aim dentro del FOV")

@@ -20,26 +20,39 @@ local Aimbot = false
 local XRay = false
 local Noclip = false
 local Invisible = false
-local BringAll = false          -- Bring Players / TP All
-local BringNPCs = false         -- Incluir NPCs y dummies
-local AnchorBring = false       -- Anclar los traídos
-local Wallbang = false          -- Balas atraviesan paredes
+local GodMode = false
+local DestroyWalls = false
+local BringAll = false
+local BringNPCs = false
+local AnchorBring = false
+local Tracers = false
+local HitboxExpander = false
+local TriggerBot = false
+local KillAura = false
 
 local FOV_MIN = 50
 local FOV_MAX = 300
 local FOVRadius = 150
 
-local BRING_DISTANCE = 500      -- Distancia máxima para atraer
-local BRING_SPACING = 3.2       -- Separación entre enemigos
-local BRING_OFFSET = 8          -- Studs enfrente de ti
+local CAMFOV_MIN = 40
+local CAMFOV_MAX = 120
+local desiredFOV = 70
 
-local WALLBANG_MAX_WALL = 6     -- Grosor máximo de pared atravesable (studs)
-local WALLBANG_INCLUDE_NPCS = false -- También atravesar paredes hacia NPCs
+local BRING_DISTANCE = 500
+local BRING_SPACING = 3.2
+local BRING_OFFSET = 8
+
+local KILL_RADIUS = 500
+local KILL_AURA_RADIUS = 25
+local DESTROY_RADIUS = 120
+
+local HITBOX_SCALE = 1.7
+local TRIGGER_RADIUS = 14
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
 --==============================
--- GUI CON FONDO PERSONALIZADO
+-- GUI
 --==============================
 
 local gui = Instance.new("ScreenGui")
@@ -54,24 +67,25 @@ main.BackgroundColor3 = Color3.fromRGB(0,0,0)
 main.BackgroundTransparency = 0.15
 main.BorderSizePixel = 0
 main.ClipsDescendants = false
+main.ZIndex = 5
 main.Parent = gui
 
--- FONDO CON IMAGEN (DEMONIO)
 local background = Instance.new("ImageLabel")
 background.Size = UDim2.new(1,0,1,0)
 background.Position = UDim2.new(0,0,0,0)
 background.BackgroundTransparency = 1
 background.Image = "rbxassetid://6221759629271129710"
 background.ScaleType = Enum.ScaleType.Fit
+background.ZIndex = 5
 background.Parent = main
 
--- BORDE DECORATIVO
 local border = Instance.new("Frame")
 border.Size = UDim2.new(1,4,1,4)
 border.Position = UDim2.new(0,-2,0,-2)
 border.BackgroundTransparency = 1
 border.BorderSizePixel = 2
 border.BorderColor3 = Color3.fromRGB(255,0,0)
+border.ZIndex = 5
 border.Parent = main
 
 local mainCorner = Instance.new("UICorner")
@@ -79,7 +93,7 @@ mainCorner.CornerRadius = UDim.new(0,12)
 mainCorner.Parent = main
 
 --==============================
--- TÍTULO CON EFECTO
+-- TÍTULO
 --==============================
 
 local title = Instance.new("TextLabel")
@@ -91,9 +105,9 @@ title.TextColor3 = Color3.new(1,0,0)
 title.TextSize = 26
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 6
 title.Parent = main
 
--- Sombra del título
 local titleShadow = Instance.new("TextLabel")
 titleShadow.Size = UDim2.new(1,-50,0,40)
 titleShadow.Position = UDim2.fromOffset(17,8)
@@ -103,6 +117,7 @@ titleShadow.TextColor3 = Color3.new(0.3,0,0)
 titleShadow.TextSize = 26
 titleShadow.Font = Enum.Font.GothamBold
 titleShadow.TextXAlignment = Enum.TextXAlignment.Left
+titleShadow.ZIndex = 6
 titleShadow.Parent = main
 
 local creator = Instance.new("TextLabel")
@@ -114,11 +129,8 @@ creator.TextColor3 = Color3.fromRGB(200,50,50)
 creator.TextSize = 14
 creator.Font = Enum.Font.Gotham
 creator.TextXAlignment = Enum.TextXAlignment.Left
+creator.ZIndex = 6
 creator.Parent = main
-
---==============================
--- CERRAR
---==============================
 
 local close = Instance.new("TextButton")
 close.Size = UDim2.fromOffset(35,35)
@@ -128,6 +140,7 @@ close.Text = "✕"
 close.TextColor3 = Color3.new(1,0.2,0.2)
 close.TextSize = 22
 close.Font = Enum.Font.GothamBold
+close.ZIndex = 7
 close.Parent = main
 
 --==============================
@@ -146,6 +159,7 @@ scroll.ScrollBarThickness = 4
 scroll.ScrollBarImageColor3 = Color3.fromRGB(255,0,0)
 scroll.ScrollBarImageTransparency = 0.25
 scroll.ClipsDescendants = true
+scroll.ZIndex = 6
 scroll.Parent = main
 
 local scrollPad = Instance.new("UIPadding")
@@ -174,13 +188,13 @@ local function createButton(text)
         button.TextColor3 = Color3.new(1,0.8,0.8)
         button.TextSize = 14
         button.Font = Enum.Font.GothamSemibold
+        button.ZIndex = 6
         button.Parent = scroll
 
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0,8)
         corner.Parent = button
 
-        -- Efecto hover
         button.MouseEnter:Connect(function()
                 button.BackgroundColor3 = Color3.fromRGB(60,0,0)
         end)
@@ -196,65 +210,12 @@ local espButton = createButton("👁️ ESP Rainbow: OFF")
 local xrayButton = createButton("👻 X-Ray: OFF")
 local noclipButton = createButton("💨 Noclip: OFF")
 local invisibleButton = createButton("🌀 Invisible: OFF")
+local godButton = createButton("🛡️ Modo Dios: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
-local wallButton = createButton("🧱 Traspasar Paredes: OFF")
-
---==============================
--- FOV TEXTO
---==============================
-
-local fovText = Instance.new("TextLabel")
-fovText.Size = UDim2.new(1,0,0,22)
-fovText.BackgroundTransparency = 1
-fovText.Text = "🎯 FOV: 150"
-fovText.TextColor3 = Color3.new(1,0.5,0.5)
-fovText.TextSize = 14
-fovText.Font = Enum.Font.GothamSemibold
-fovText.TextXAlignment = Enum.TextXAlignment.Left
-fovText.Parent = scroll
-
---==============================
--- SLIDER FOV
---==============================
-
-local sliderHolder = Instance.new("Frame")
-sliderHolder.Size = UDim2.new(1,0,0,20)
-sliderHolder.BackgroundTransparency = 1
-sliderHolder.Parent = scroll
-
-local slider = Instance.new("Frame")
-slider.Size = UDim2.new(1,0,0,8)
-slider.Position = UDim2.new(0,0,0.5,-4)
-slider.BackgroundColor3 = Color3.fromRGB(60,0,0)
-slider.BorderSizePixel = 0
-slider.Parent = sliderHolder
-
-local sliderCorner = Instance.new("UICorner")
-sliderCorner.CornerRadius = UDim.new(1,0)
-sliderCorner.Parent = slider
-
-local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(0.5,0,1,0)
-sliderFill.BackgroundColor3 = Color3.new(1,0,0)
-sliderFill.BorderSizePixel = 0
-sliderFill.Parent = slider
-
-local sliderFillCorner = Instance.new("UICorner")
-sliderFillCorner.CornerRadius = UDim.new(1,0)
-sliderFillCorner.Parent = sliderFill
-
-local knob = Instance.new("Frame")
-knob.Size = UDim2.fromOffset(18,18)
-knob.AnchorPoint = Vector2.new(0.5,0.5)
-knob.BackgroundColor3 = Color3.new(1,0.2,0.2)
-knob.BorderSizePixel = 0
-knob.Parent = slider
-
-local knobCorner = Instance.new("UICorner")
-knobCorner.CornerRadius = UDim.new(1,0)
-knobCorner.Parent = knob
+local destroyButton = createButton("💥 Destruir Obstáculos: OFF")
+local killButton = createButton("💀 Matar Enemigos")
 
 --==============================
 -- CÍRCULO FOV
@@ -268,6 +229,7 @@ fovCircle.BackgroundTransparency = 1
 fovCircle.BorderSizePixel = 0
 fovCircle.Active = false
 fovCircle.Selectable = false
+fovCircle.ZIndex = 3
 fovCircle.Parent = gui
 
 local circleCorner = Instance.new("UICorner")
@@ -279,58 +241,152 @@ circleStroke.Thickness = 2
 circleStroke.Color = Color3.new(1,0,0)
 circleStroke.Parent = fovCircle
 
---==============================
--- ACTUALIZAR FOV
---==============================
-
 local function updateFOV()
         fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
         fovCircle.Position = UDim2.fromScale(0.5,0.5)
         fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
-        fovText.Text = "🎯 FOV: "..tostring(FOVRadius)
-
-        local percent = (FOVRadius-FOV_MIN) / (FOV_MAX-FOV_MIN)
-        knob.Position = UDim2.new(percent, 0, 0.5, 0)
-        sliderFill.Size = UDim2.new(percent, 0, 1, 0)
 end
 
-updateFOV()
-
 --==============================
--- SLIDER
+-- SLIDERS
 --==============================
 
-local draggingFOV = false
+local function createSlider(labelText, min, max, initial, onChange)
+        local holder = Instance.new("Frame")
+        holder.Size = UDim2.new(1,0,0,48)
+        holder.BackgroundTransparency = 1
+        holder.ZIndex = 6
+        holder.Parent = scroll
 
-local function changeFOV(x)
-        local left = slider.AbsolutePosition.X
-        local width = slider.AbsoluteSize.X
-        if width <= 0 then return end
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1,0,0,20)
+        label.BackgroundTransparency = 1
+        label.Text = labelText..tostring(initial)
+        label.TextColor3 = Color3.new(1,0.5,0.5)
+        label.TextSize = 14
+        label.Font = Enum.Font.GothamSemibold
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.ZIndex = 6
+        label.Parent = holder
 
-        local percent = math.clamp((x-left)/width, 0, 1)
-        FOVRadius = math.floor(FOV_MIN + percent * (FOV_MAX-FOV_MIN))
+        local bar = Instance.new("Frame")
+        bar.Size = UDim2.new(1,0,0,8)
+        bar.Position = UDim2.new(0,0,0,32)
+        bar.BackgroundColor3 = Color3.fromRGB(60,0,0)
+        bar.BorderSizePixel = 0
+        bar.ZIndex = 6
+        bar.Parent = holder
+
+        local barCorner = Instance.new("UICorner")
+        barCorner.CornerRadius = UDim.new(1,0)
+        barCorner.Parent = bar
+
+        local fill = Instance.new("Frame")
+        fill.Size = UDim2.new(0.5,0,1,0)
+        fill.BackgroundColor3 = Color3.new(1,0,0)
+        fill.BorderSizePixel = 0
+        fill.ZIndex = 6
+        fill.Parent = bar
+
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(1,0)
+        fillCorner.Parent = fill
+
+        local knob = Instance.new("Frame")
+        knob.Size = UDim2.fromOffset(18,18)
+        knob.AnchorPoint = Vector2.new(0.5,0.5)
+        knob.BackgroundColor3 = Color3.new(1,0.2,0.2)
+        knob.BorderSizePixel = 0
+        knob.ZIndex = 7
+        knob.Parent = bar
+
+        local knobCorner = Instance.new("UICorner")
+        knobCorner.CornerRadius = UDim.new(1,0)
+        knobCorner.Parent = knob
+
+        local api = {}
+        local dragging = false
+
+        local function paint(percent)
+                knob.Position = UDim2.new(percent, 0, 0.5, 0)
+                fill.Size = UDim2.new(percent, 0, 1, 0)
+        end
+
+        local function apply(x)
+                local left = bar.AbsolutePosition.X
+                local width = bar.AbsoluteSize.X
+                if width <= 0 then return end
+
+                local percent = math.clamp((x-left)/width, 0, 1)
+                paint(percent)
+
+                local value = math.floor(min + percent * (max-min) + 0.5)
+                label.Text = labelText..tostring(value)
+                onChange(value)
+        end
+
+        bar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = true
+                        apply(input.Position.X)
+                end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+                if not dragging then return end
+                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        apply(input.Position.X)
+                end
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = false
+                end
+        end)
+
+        api.set = function(value)
+                local percent = math.clamp((value-min)/(max-min), 0, 1)
+                paint(percent)
+                label.Text = labelText..tostring(math.floor(value + 0.5))
+        end
+
+        paint(math.clamp((initial-min)/(max-min), 0, 1))
+        onChange(initial)
+
+        return api
+end
+
+-- FOV del aimbot
+local aimFovSlider = createSlider("🎯 FOV: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
+        FOVRadius = value
         updateFOV()
-end
+end)
 
-slider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                draggingFOV = true
-                changeFOV(input.Position.X)
+-- FOV de la cámara
+local camFovSlider = createSlider("📷 FOV Cámara: ", CAMFOV_MIN, CAMFOV_MAX, desiredFOV, function(value)
+        desiredFOV = value
+        local cam = workspace.CurrentCamera
+        if cam then
+                cam.FieldOfView = value
         end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-        if not draggingFOV then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                changeFOV(input.Position.X)
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+        local cam = workspace.CurrentCamera
+        if cam then
+                cam.FieldOfView = desiredFOV
         end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                draggingFOV = false
-        end
-end)
+--==============================
+-- BOTONES NUEVOS
+--==============================
+
+local tracerButton = createButton("📡 Tracers: OFF")
+local hitboxButton = createButton("📦 Hitbox Expander: OFF")
+local triggerButton = createButton("⚡ Trigger Bot: OFF")
+local auraButton = createButton("🗡️ Kill Aura: OFF")
 
 -- Mantener el círculo en el centro
 RunService.RenderStepped:Connect(function()
@@ -375,14 +431,12 @@ local function addESP(character)
         highlight.OutlineTransparency = 0
         highlight.Parent = character
 
-        -- Color inicial
         highlight.FillColor = Color3.fromHSV(0, 1, 1)
         highlight.OutlineColor = Color3.fromHSV(0.5, 1, 1)
 
         return highlight
 end
 
--- Función para actualizar colores rainbow
 local function updateRainbowColors()
         if not ESP then return end
 
@@ -439,7 +493,6 @@ Players.PlayerRemoving:Connect(function(plr)
         removeESP(plr.Character)
 end)
 
--- Loop para actualizar colores rainbow
 RunService.RenderStepped:Connect(function()
         updateRainbowColors()
 end)
@@ -460,20 +513,17 @@ local function setInvisible()
                         part.CanCollide = false
                 end
 
-                -- Ocultar accesorios
                 if part:IsA("Accessory") or part:IsA("Hat") then
                         if part:FindFirstChild("Handle") then
                                 part.Handle.Transparency = 1
                         end
                 end
 
-                -- Ocultar ropa
                 if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
                         part.Transparency = 1
                 end
         end
 
-        -- Ocultar humanoid
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if humanoid then
                 humanoid.BreakJointsOnDeath = false
@@ -502,7 +552,6 @@ local function setVisible()
         end
 end
 
--- Aplicar invisibilidad constantemente
 RunService.RenderStepped:Connect(function()
         if Invisible then
                 setInvisible()
@@ -606,7 +655,7 @@ end
 --==================================================
 
 --==============================
--- BUSCAR NPCs (CACHÉ)
+-- NPCs (CACHÉ)
 --==============================
 
 local npcCache = {}
@@ -636,7 +685,7 @@ end
 
 task.spawn(function()
         while true do
-                if (Wallbang and WALLBANG_INCLUDE_NPCS) or BringNPCs then
+                if BringNPCs then
                         npcCache = scanNPCs()
                 end
                 task.wait(1)
@@ -644,147 +693,287 @@ task.spawn(function()
 end)
 
 --==============================
--- TRASPASAR PAREDES (WALLBANG REAL)
+-- TRACERS
 --==============================
 
-local FILTER_INCLUDE = Enum.RaycastFilterType.Include
-local FILTER_EXCLUDE = Enum.RaycastFilterType.Exclude
+local tracerLayer = Instance.new("Frame")
+tracerLayer.Name = "Tracers"
+tracerLayer.Size = UDim2.new(1,0,1,0)
+tracerLayer.BackgroundTransparency = 1
+tracerLayer.ZIndex = 1
+tracerLayer.Parent = gui
 
-local inCast = false
-local oldNamecall = nil
+local tracerLines = {}
 
-local function characterList()
-        local list = {}
+local function updateTracers()
+        camera = workspace.CurrentCamera
+        if not camera then return end
+
+        local viewport = camera.ViewportSize
+        local originX = viewport.X / 2
+        local originY = viewport.Y
+
+        local used = {}
 
         for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= player and plr.Character then
                         local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 then
-                                table.insert(list, plr.Character)
-                        end
-                end
-        end
+                        local head = plr.Character:FindFirstChild("Head")
+                        if hum and head and hum.Health > 0 then
+                                local pos = camera:WorldToViewportPoint(head.Position)
+                                if pos.Z > 0 then
+                                        local line = tracerLines[plr]
+                                        if not line then
+                                                line = Instance.new("Frame")
+                                                line.AnchorPoint = Vector2.new(0,0.5)
+                                                line.BorderSizePixel = 0
+                                                line.ZIndex = 1
+                                                line.Parent = tracerLayer
+                                                tracerLines[plr] = line
+                                        end
 
-        if WALLBANG_INCLUDE_NPCS then
-                for _, npc in ipairs(npcCache) do
-                        if npc.Parent then
-                                table.insert(list, npc)
-                        end
-                end
-        end
+                                        used[plr] = true
 
-        return list
-end
+                                        local dx = pos.X - originX
+                                        local dy = pos.Y - originY
+                                        local length = math.sqrt(dx*dx + dy*dy)
 
-local function makeParams(filterType, list)
-        local params = RaycastParams.new()
-        params.FilterType = filterType
-        params.FilterDescendantsInstances = list
-        params.IgnoreWater = true
-        return params
-end
-
--- Devuelve el impacto en un personaje aunque haya paredes en medio
-local function wallbangCast(origin, direction)
-        local length = direction.Magnitude
-        if length < 0.1 then return nil end
-
-        local unit = direction.Unit
-        local chars = characterList()
-        if #chars == 0 then return nil end
-
-        -- 1) ¿Hay alguien en la línea? (solo personajes)
-        local charHit = workspace:Raycast(origin, direction, makeParams(FILTER_INCLUDE, chars))
-        if not charHit or not charHit.Instance then return nil end
-
-        local model = charHit.Instance:FindFirstAncestorOfClass("Model")
-        local hum = model and model:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Health <= 0 then return nil end
-
-        local travel = (charHit.Position - origin).Magnitude
-        if travel <= 0.1 then return charHit end
-
-        -- 2) Medir las paredes intermedias y descartar las demasiado gruesas
-        local worldParams = makeParams(FILTER_EXCLUDE, chars)
-        local cursor = origin
-        local used = 0
-
-        for _ = 1, 4 do
-                local remaining = travel - used
-                if remaining <= 0.05 then break end
-
-                local wallHit = workspace:Raycast(cursor, unit * remaining, worldParams)
-                if not wallHit then break end
-
-                local thickList = table.clone(chars)
-                table.insert(thickList, wallHit.Instance)
-                local exitHit = workspace:Raycast(
-                        wallHit.Position + unit * 0.01,
-                        unit * remaining,
-                        makeParams(FILTER_EXCLUDE, thickList)
-                )
-
-                local thickness
-                if exitHit then
-                        thickness = (exitHit.Position - wallHit.Position).Magnitude
-                else
-                        thickness = remaining
-                end
-
-                if thickness > WALLBANG_MAX_WALL then return nil end
-
-                cursor = wallHit.Position + unit * (thickness + 0.02)
-                used = (cursor - origin).Magnitude
-        end
-
-        return charHit
-end
-
--- Intercepta los raycasts del juego
-local function installWallbangHook()
-        if oldNamecall then return end
-        if not hookmetamethod then return end
-
-        local ok, original = pcall(hookmetamethod, game, "__namecall", function(self, ...)
-                local method = getnamecallmethod()
-
-                if Wallbang and not inCast and self == workspace then
-                        local args = { ... }
-
-                        if method == "Raycast" then
-                                local origin, direction = args[1], args[2]
-                                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
-                                        inCast = true
-                                        local hit = wallbangCast(origin, direction)
-                                        inCast = false
-                                        if hit then return hit end
+                                        line.Position = UDim2.fromOffset(originX, originY)
+                                        line.Size = UDim2.fromOffset(length, 1)
+                                        line.Rotation = math.deg(math.atan2(dy, dx))
+                                        line.BackgroundColor3 = Color3.fromHSV((tick()*0.15) % 1, 1, 1)
+                                        line.Visible = true
                                 end
+                        end
+                end
+        end
 
-                        elseif method == "FindPartOnRay"
-                                or method == "FindPartOnRayWithIgnoreList"
-                                or method == "FindPartOnRayWithWhitelist" then
-                                local ray = args[1]
-                                if typeof(ray) == "Ray" then
-                                        inCast = true
-                                        local hit = wallbangCast(ray.Origin, ray.Direction)
-                                        inCast = false
-                                        if hit then
-                                                return hit.Instance, hit.Position, hit.Normal, hit.Material
+        for plr, line in pairs(tracerLines) do
+                if not used[plr] then
+                        line.Visible = false
+                end
+        end
+end
+
+RunService.RenderStepped:Connect(function()
+        if not Tracers then return end
+        updateTracers()
+end)
+
+--==============================
+-- HITBOX EXPANDER
+--==============================
+
+local hitboxOriginal = {}
+
+local function expandHitboxes()
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        for _, part in ipairs(plr.Character:GetDescendants()) do
+                                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                                        if hitboxOriginal[part] == nil then
+                                                hitboxOriginal[part] = part.Size
+                                        end
+                                        part.Size = hitboxOriginal[part] * HITBOX_SCALE
+                                end
+                        end
+                end
+        end
+end
+
+local function restoreHitboxes()
+        for part, size in pairs(hitboxOriginal) do
+                if part and part.Parent then
+                        part.Size = size
+                end
+        end
+        table.clear(hitboxOriginal)
+end
+
+task.spawn(function()
+        while true do
+                if HitboxExpander then
+                        expandHitboxes()
+                        task.wait(0.5)
+                else
+                        task.wait(0.1)
+                end
+        end
+end)
+
+--==============================
+-- MODO DIOS
+--==============================
+
+local savedMaxHealth = nil
+
+local function godHumanoid()
+        local character = player.Character
+        if not character then return nil end
+        return character:FindFirstChildOfClass("Humanoid")
+end
+
+RunService.RenderStepped:Connect(function()
+        if not GodMode then return end
+
+        local hum = godHumanoid()
+        if not hum then return end
+
+        if savedMaxHealth == nil then
+                savedMaxHealth = hum.MaxHealth
+        end
+
+        if hum.MaxHealth ~= math.huge then
+                hum.MaxHealth = math.huge
+        end
+
+        if hum.Health < hum.MaxHealth then
+                hum.Health = hum.MaxHealth
+        end
+end)
+
+player.CharacterAdded:Connect(function()
+        savedMaxHealth = nil
+end)
+
+--==============================
+-- DESTRUIR OBSTÁCULOS
+--==============================
+
+local function destroyObstacles()
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local origin = root.Position
+
+        for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and obj.Anchored and obj.Name ~= "HumanoidRootPart" then
+                        if not obj:IsA("SpawnLocation") then
+                                local parentModel = obj:FindFirstAncestorOfClass("Model")
+                                local isCharacter = parentModel and parentModel:FindFirstChildOfClass("Humanoid")
+
+                                if not isCharacter and (obj.Position - origin).Magnitude <= DESTROY_RADIUS then
+                                        local s = obj.Size
+                                        local isFloor = (s.Y <= s.X and s.Y <= s.Z)
+
+                                        if not isFloor then
+                                                pcall(function()
+                                                        obj:Destroy()
+                                                end)
                                         end
                                 end
                         end
                 end
-
-                return oldNamecall(self, ...)
-        end)
-
-        if ok then
-                oldNamecall = original
         end
 end
 
+task.spawn(function()
+        while true do
+                if DestroyWalls then
+                        destroyObstacles()
+                        task.wait(0.4)
+                else
+                        task.wait(0.1)
+                end
+        end
+end)
+
 --==============================
--- BRING PLAYERS (TRAER ENEMIGOS)
+-- MATAR
+--==============================
+
+local function killTargets(radius)
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local origin = root.Position
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.Health > 0 and (hrp.Position - origin).Magnitude <= radius then
+                                pcall(function()
+                                        hum.Health = 0
+                                end)
+                        end
+                end
+        end
+
+        if BringNPCs then
+                for _, npc in ipairs(npcCache) do
+                        local hum = npc:FindFirstChildOfClass("Humanoid")
+                        local hrp = npc.PrimaryPart or npc:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.Health > 0 and (hrp.Position - origin).Magnitude <= radius then
+                                pcall(function()
+                                        hum.Health = 0
+                                end)
+                        end
+                end
+        end
+end
+
+task.spawn(function()
+        while true do
+                if KillAura then
+                        killTargets(KILL_AURA_RADIUS)
+                        task.wait(0.25)
+                else
+                        task.wait(0.1)
+                end
+        end
+end)
+
+--==============================
+-- TRIGGER BOT
+--==============================
+
+local function triggerCheck()
+        camera = workspace.CurrentCamera
+        if not camera then return end
+
+        local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+        local character = player.Character
+        if not character then return end
+
+        local tool = character:FindFirstChildOfClass("Tool")
+        if not tool then return end
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        local head = plr.Character:FindFirstChild("Head")
+                        if hum and head and hum.Health > 0 then
+                                local pos, visible = camera:WorldToViewportPoint(head.Position)
+                                if visible and pos.Z > 0 then
+                                        local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                                        if dist <= TRIGGER_RADIUS then
+                                                pcall(function()
+                                                        tool:Activate()
+                                                end)
+                                                return
+                                        end
+                                end
+                        end
+                end
+        end
+end
+
+task.spawn(function()
+        while true do
+                if TriggerBot then
+                        triggerCheck()
+                        task.wait(0.09)
+                else
+                        task.wait(0.1)
+                end
+        end
+end)
+
+--==============================
+-- BRING PLAYERS
 --==============================
 
 local function collectTargets()
@@ -897,14 +1086,63 @@ xrayButton.Activated:Connect(function()
         end
 end)
 
-wallButton.Activated:Connect(function()
-        Wallbang = not Wallbang
-        wallButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
+godButton.Activated:Connect(function()
+        GodMode = not GodMode
+        godButton.Text = GodMode and "🛡️ Modo Dios: ON" or "🛡️ Modo Dios: OFF"
 
-        if Wallbang then
-                installWallbangHook()
-                npcCache = scanNPCs()
+        local hum = godHumanoid()
+        if not GodMode then
+                if hum then
+                        hum.MaxHealth = savedMaxHealth or 100
+                        hum.Health = hum.MaxHealth
+                end
+                savedMaxHealth = nil
         end
+end)
+
+destroyButton.Activated:Connect(function()
+        DestroyWalls = not DestroyWalls
+        destroyButton.Text = DestroyWalls and "💥 Destruir Obstáculos: ON" or "💥 Destruir Obstáculos: OFF"
+
+        if DestroyWalls then
+                destroyObstacles()
+        end
+end)
+
+killButton.Activated:Connect(function()
+        killTargets(KILL_RADIUS)
+end)
+
+tracerButton.Activated:Connect(function()
+        Tracers = not Tracers
+        tracerButton.Text = Tracers and "📡 Tracers: ON" or "📡 Tracers: OFF"
+
+        if not Tracers then
+                for _, line in pairs(tracerLines) do
+                        line.Visible = false
+                end
+        end
+end)
+
+hitboxButton.Activated:Connect(function()
+        HitboxExpander = not HitboxExpander
+        hitboxButton.Text = HitboxExpander and "📦 Hitbox Expander: ON" or "📦 Hitbox Expander: OFF"
+
+        if HitboxExpander then
+                expandHitboxes()
+        else
+                restoreHitboxes()
+        end
+end)
+
+triggerButton.Activated:Connect(function()
+        TriggerBot = not TriggerBot
+        triggerButton.Text = TriggerBot and "⚡ Trigger Bot: ON" or "⚡ Trigger Bot: OFF"
+end)
+
+auraButton.Activated:Connect(function()
+        KillAura = not KillAura
+        auraButton.Text = KillAura and "🗡️ Kill Aura: ON" or "🗡️ Kill Aura: OFF"
 end)
 
 bringButton.Activated:Connect(function()
@@ -914,7 +1152,6 @@ bringButton.Activated:Connect(function()
         if BringAll then
                 bringTargets()
         else
-                -- Soltar el anclaje al apagar
                 if AnchorBring then
                         for _, plr in ipairs(Players:GetPlayers()) do
                                 if plr ~= player and plr.Character then
@@ -960,6 +1197,7 @@ openButton.TextColor3 = Color3.new(1,0.3,0)
 openButton.BackgroundColor3 = Color3.fromRGB(20,0,0)
 openButton.BackgroundTransparency = 0.3
 openButton.Visible = false
+openButton.ZIndex = 10
 openButton.Parent = gui
 
 local openCorner = Instance.new("UICorner")
@@ -977,7 +1215,8 @@ openButton.Activated:Connect(function()
 end)
 
 print("🔥 NSAKI_DZ8 - Demon Edition cargado")
-print("👿 ESP Rainbow activo - Colores cambiantes")
-print("🌀 Invisibilidad agregada")
-print("🧲 Bring Players agregado - Enemigos enfrente de ti")
-print("🧱 Wallbang agregado - Balas atraviesan paredes reales")
+print("📷 FOV de cámara agregado")
+print("📡 Tracers agregados")
+print("📦 Hitbox Expander agregado")
+print("⚡ Trigger Bot agregado")
+print("🗡️ Kill Aura agregada")

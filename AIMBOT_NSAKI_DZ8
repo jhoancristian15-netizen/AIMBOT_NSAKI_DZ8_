@@ -23,10 +23,6 @@ local Invisible = false
 local BringAll = false
 local BringNPCs = false
 local AnchorBring = false
-local Tracers = false
-local HitboxExpander = false
-local TriggerBot = false
-local KillAura = false
 
 local FOV_MIN = 50
 local FOV_MAX = 300
@@ -39,11 +35,6 @@ local desiredFOV = 70
 local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
-
-local KILL_AURA_RADIUS = 25
-
-local HITBOX_SCALE = 1.7
-local TRIGGER_RADIUS = 14
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -169,7 +160,6 @@ scrollList.Padding = UDim.new(0,6)
 scrollList.SortOrder = Enum.SortOrder.LayoutOrder
 scrollList.Parent = scroll
 
--- El alto del lienzo se calcula solo, así se llega hasta el último botón
 local function updateCanvas()
         scroll.CanvasSize = UDim2.new(0,0,0, scrollList.AbsoluteContentSize.Y + 26)
 end
@@ -208,50 +198,6 @@ RunService.RenderStepped:Connect(function()
                         scroll.CanvasPosition = Vector2.new(0, savedScroll)
                 end
         end
-end)
-
---==============================
--- NAVEGACIÓN RÁPIDA
---==============================
-
-local navRow = Instance.new("Frame")
-navRow.Size = UDim2.new(1,0,0,26)
-navRow.BackgroundTransparency = 1
-navRow.ZIndex = 6
-navRow.Parent = scroll
-
-local function navButton(text, position)
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(0.5,-3,1,0)
-        button.Position = position
-        button.BackgroundColor3 = Color3.fromRGB(40,0,0)
-        button.BackgroundTransparency = 0.2
-        button.BorderSizePixel = 0
-        button.Text = text
-        button.TextColor3 = Color3.new(1,0.6,0.6)
-        button.TextSize = 14
-        button.Font = Enum.Font.GothamBold
-        button.ZIndex = 6
-        button.Parent = navRow
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0,8)
-        corner.Parent = button
-
-        return button
-end
-
-local topNav = navButton("⬆️ Inicio", UDim2.new(0,0,0,0))
-local bottomNav = navButton("⬇️ Final", UDim2.new(0.5,3,0,0))
-
-topNav.Activated:Connect(function()
-        savedScroll = 0
-        scroll.CanvasPosition = Vector2.new(0,0)
-end)
-
-bottomNav.Activated:Connect(function()
-        savedScroll = maxScroll()
-        scroll.CanvasPosition = Vector2.new(0, savedScroll)
 end)
 
 --==============================
@@ -453,15 +399,6 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
                 cam.FieldOfView = desiredFOV
         end
 end)
-
---==============================
--- BOTONES NUEVOS
---==============================
-
-local tracerButton = createButton("📡 Tracers: OFF")
-local hitboxButton = createButton("📦 Hitbox Expander: OFF")
-local triggerButton = createButton("⚡ Trigger Bot: OFF")
-local auraButton = createButton("🗡️ Kill Aura: OFF")
 
 RunService.RenderStepped:Connect(function()
         if fovCircle then
@@ -767,208 +704,6 @@ task.spawn(function()
 end)
 
 --==============================
--- TRACERS
---==============================
-
-local tracerLayer = Instance.new("Frame")
-tracerLayer.Name = "Tracers"
-tracerLayer.Size = UDim2.new(1,0,1,0)
-tracerLayer.BackgroundTransparency = 1
-tracerLayer.ZIndex = 1
-tracerLayer.Parent = gui
-
-local tracerLines = {}
-
-local function updateTracers()
-        camera = workspace.CurrentCamera
-        if not camera then return end
-
-        local viewport = camera.ViewportSize
-        local originX = viewport.X / 2
-        local originY = viewport.Y
-
-        local used = {}
-
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        local head = plr.Character:FindFirstChild("Head")
-                        if hum and head and hum.Health > 0 then
-                                local pos = camera:WorldToViewportPoint(head.Position)
-                                if pos.Z > 0 then
-                                        local line = tracerLines[plr]
-                                        if not line then
-                                                line = Instance.new("Frame")
-                                                line.AnchorPoint = Vector2.new(0,0.5)
-                                                line.BorderSizePixel = 0
-                                                line.ZIndex = 1
-                                                line.Parent = tracerLayer
-                                                tracerLines[plr] = line
-                                        end
-
-                                        used[plr] = true
-
-                                        local dx = pos.X - originX
-                                        local dy = pos.Y - originY
-                                        local length = math.sqrt(dx*dx + dy*dy)
-
-                                        line.Position = UDim2.fromOffset(originX, originY)
-                                        line.Size = UDim2.fromOffset(length, 1)
-                                        line.Rotation = math.deg(math.atan2(dy, dx))
-                                        line.BackgroundColor3 = Color3.fromHSV((tick()*0.15) % 1, 1, 1)
-                                        line.Visible = true
-                                end
-                        end
-                end
-        end
-
-        for plr, line in pairs(tracerLines) do
-                if not used[plr] then
-                        line.Visible = false
-                end
-        end
-end
-
-RunService.RenderStepped:Connect(function()
-        if not Tracers then return end
-        updateTracers()
-end)
-
---==============================
--- HITBOX EXPANDER
---==============================
-
-local hitboxOriginal = {}
-
-local function expandHitboxes()
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        for _, part in ipairs(plr.Character:GetDescendants()) do
-                                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                                        if hitboxOriginal[part] == nil then
-                                                hitboxOriginal[part] = part.Size
-                                        end
-                                        part.Size = hitboxOriginal[part] * HITBOX_SCALE
-                                end
-                        end
-                end
-        end
-end
-
-local function restoreHitboxes()
-        for part, size in pairs(hitboxOriginal) do
-                if part and part.Parent then
-                        part.Size = size
-                end
-        end
-        table.clear(hitboxOriginal)
-end
-
-task.spawn(function()
-        while true do
-                if HitboxExpander then
-                        expandHitboxes()
-                        task.wait(0.5)
-                else
-                        task.wait(0.1)
-                end
-        end
-end)
-
---==============================
--- MATAR / KILL AURA
---==============================
-
-local function killTargets(radius)
-        local character = player.Character
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-
-        local origin = root.Position
-
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                        if hum and hrp and hum.Health > 0 and (hrp.Position - origin).Magnitude <= radius then
-                                pcall(function()
-                                        hum.Health = 0
-                                end)
-                        end
-                end
-        end
-
-        if BringNPCs then
-                for _, npc in ipairs(npcCache) do
-                        local hum = npc:FindFirstChildOfClass("Humanoid")
-                        local hrp = npc.PrimaryPart or npc:FindFirstChild("HumanoidRootPart")
-                        if hum and hrp and hum.Health > 0 and (hrp.Position - origin).Magnitude <= radius then
-                                pcall(function()
-                                        hum.Health = 0
-                                end)
-                        end
-                end
-        end
-end
-
-task.spawn(function()
-        while true do
-                if KillAura then
-                        killTargets(KILL_AURA_RADIUS)
-                        task.wait(0.25)
-                else
-                        task.wait(0.1)
-                end
-        end
-end)
-
---==============================
--- TRIGGER BOT
---==============================
-
-local function triggerCheck()
-        camera = workspace.CurrentCamera
-        if not camera then return end
-
-        local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
-        local character = player.Character
-        if not character then return end
-
-        local tool = character:FindFirstChildOfClass("Tool")
-        if not tool then return end
-
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        local head = plr.Character:FindFirstChild("Head")
-                        if hum and head and hum.Health > 0 then
-                                local pos, visible = camera:WorldToViewportPoint(head.Position)
-                                if visible and pos.Z > 0 then
-                                        local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                                        if dist <= TRIGGER_RADIUS then
-                                                pcall(function()
-                                                        tool:Activate()
-                                                end)
-                                                return
-                                        end
-                                end
-                        end
-                end
-        end
-end
-
-task.spawn(function()
-        while true do
-                if TriggerBot then
-                        triggerCheck()
-                        task.wait(0.09)
-                else
-                        task.wait(0.1)
-                end
-        end
-end)
-
---==============================
 -- BRING PLAYERS
 --==============================
 
@@ -1082,38 +817,6 @@ xrayButton.Activated:Connect(function()
         end
 end)
 
-tracerButton.Activated:Connect(function()
-        Tracers = not Tracers
-        tracerButton.Text = Tracers and "📡 Tracers: ON" or "📡 Tracers: OFF"
-
-        if not Tracers then
-                for _, line in pairs(tracerLines) do
-                        line.Visible = false
-                end
-        end
-end)
-
-hitboxButton.Activated:Connect(function()
-        HitboxExpander = not HitboxExpander
-        hitboxButton.Text = HitboxExpander and "📦 Hitbox Expander: ON" or "📦 Hitbox Expander: OFF"
-
-        if HitboxExpander then
-                expandHitboxes()
-        else
-                restoreHitboxes()
-        end
-end)
-
-triggerButton.Activated:Connect(function()
-        TriggerBot = not TriggerBot
-        triggerButton.Text = TriggerBot and "⚡ Trigger Bot: ON" or "⚡ Trigger Bot: OFF"
-end)
-
-auraButton.Activated:Connect(function()
-        KillAura = not KillAura
-        auraButton.Text = KillAura and "🗡️ Kill Aura: ON" or "🗡️ Kill Aura: OFF"
-end)
-
 bringButton.Activated:Connect(function()
         BringAll = not BringAll
         bringButton.Text = BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"
@@ -1184,8 +887,6 @@ openButton.Activated:Connect(function()
 end)
 
 print("🔥 NSAKI_DZ8 - Demon Edition cargado")
-print("📷 FOV de cámara agregado")
-print("📡 Tracers agregados")
-print("📦 Hitbox Expander agregado")
-print("⚡ Trigger Bot agregado")
-print("🗡️ Kill Aura agregada")
+print("🎯 Aimbot, ESP, X-Ray, Noclip, Invisible")
+print("🧲 Bring Players")
+print("📷 Ajuste de FOV de cámara")

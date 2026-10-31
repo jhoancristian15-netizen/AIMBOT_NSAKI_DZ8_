@@ -20,8 +20,6 @@ local Aimbot = false
 local XRay = false
 local Noclip = false
 local Invisible = false
-local GodMode = false
-local DestroyWalls = false
 local BringAll = false
 local BringNPCs = false
 local AnchorBring = false
@@ -42,9 +40,7 @@ local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 
-local KILL_RADIUS = 500
 local KILL_AURA_RADIUS = 25
-local DESTROY_RADIUS = 120
 
 local HITBOX_SCALE = 1.7
 local TRIGGER_RADIUS = 14
@@ -153,7 +149,6 @@ scroll.Position = UDim2.fromOffset(0,72)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.CanvasSize = UDim2.new(0,0,0,0)
-scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 scroll.ScrollingDirection = Enum.ScrollingDirection.Y
 scroll.ScrollBarThickness = 4
 scroll.ScrollBarImageColor3 = Color3.fromRGB(255,0,0)
@@ -173,6 +168,91 @@ local scrollList = Instance.new("UIListLayout")
 scrollList.Padding = UDim.new(0,6)
 scrollList.SortOrder = Enum.SortOrder.LayoutOrder
 scrollList.Parent = scroll
+
+-- El alto del lienzo se calcula solo, así se llega hasta el último botón
+local function updateCanvas()
+        scroll.CanvasSize = UDim2.new(0,0,0, scrollList.AbsoluteContentSize.Y + 26)
+end
+
+scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
+updateCanvas()
+
+-- Evita que el menú se regrese solo hacia arriba
+local scrollTouching = false
+local savedScroll = 0
+
+local function maxScroll()
+        return math.max(0, scroll.CanvasSize.Y - scroll.AbsoluteSize.Y)
+end
+
+scroll.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                scrollTouching = true
+        end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                task.delay(0.15, function()
+                        scrollTouching = false
+                end)
+        end
+end)
+
+RunService.RenderStepped:Connect(function()
+        if scrollTouching then
+                savedScroll = scroll.CanvasPosition.Y
+        else
+                savedScroll = math.clamp(savedScroll, 0, maxScroll())
+                if math.abs(scroll.CanvasPosition.Y - savedScroll) > 0.5 then
+                        scroll.CanvasPosition = Vector2.new(0, savedScroll)
+                end
+        end
+end)
+
+--==============================
+-- NAVEGACIÓN RÁPIDA
+--==============================
+
+local navRow = Instance.new("Frame")
+navRow.Size = UDim2.new(1,0,0,26)
+navRow.BackgroundTransparency = 1
+navRow.ZIndex = 6
+navRow.Parent = scroll
+
+local function navButton(text, position)
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(0.5,-3,1,0)
+        button.Position = position
+        button.BackgroundColor3 = Color3.fromRGB(40,0,0)
+        button.BackgroundTransparency = 0.2
+        button.BorderSizePixel = 0
+        button.Text = text
+        button.TextColor3 = Color3.new(1,0.6,0.6)
+        button.TextSize = 14
+        button.Font = Enum.Font.GothamBold
+        button.ZIndex = 6
+        button.Parent = navRow
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0,8)
+        corner.Parent = button
+
+        return button
+end
+
+local topNav = navButton("⬆️ Inicio", UDim2.new(0,0,0,0))
+local bottomNav = navButton("⬇️ Final", UDim2.new(0.5,3,0,0))
+
+topNav.Activated:Connect(function()
+        savedScroll = 0
+        scroll.CanvasPosition = Vector2.new(0,0)
+end)
+
+bottomNav.Activated:Connect(function()
+        savedScroll = maxScroll()
+        scroll.CanvasPosition = Vector2.new(0, savedScroll)
+end)
 
 --==============================
 -- BOTONES
@@ -210,12 +290,9 @@ local espButton = createButton("👁️ ESP Rainbow: OFF")
 local xrayButton = createButton("👻 X-Ray: OFF")
 local noclipButton = createButton("💨 Noclip: OFF")
 local invisibleButton = createButton("🌀 Invisible: OFF")
-local godButton = createButton("🛡️ Modo Dios: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
-local destroyButton = createButton("💥 Destruir Obstáculos: OFF")
-local killButton = createButton("💀 Matar Enemigos")
 
 --==============================
 -- CÍRCULO FOV
@@ -357,13 +434,11 @@ local function createSlider(labelText, min, max, initial, onChange)
         return api
 end
 
--- FOV del aimbot
 local aimFovSlider = createSlider("🎯 FOV: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
         FOVRadius = value
         updateFOV()
 end)
 
--- FOV de la cámara
 local camFovSlider = createSlider("📷 FOV Cámara: ", CAMFOV_MIN, CAMFOV_MAX, desiredFOV, function(value)
         desiredFOV = value
         local cam = workspace.CurrentCamera
@@ -388,7 +463,6 @@ local hitboxButton = createButton("📦 Hitbox Expander: OFF")
 local triggerButton = createButton("⚡ Trigger Bot: OFF")
 local auraButton = createButton("🗡️ Kill Aura: OFF")
 
--- Mantener el círculo en el centro
 RunService.RenderStepped:Connect(function()
         if fovCircle then
                 fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
@@ -802,85 +876,7 @@ task.spawn(function()
 end)
 
 --==============================
--- MODO DIOS
---==============================
-
-local savedMaxHealth = nil
-
-local function godHumanoid()
-        local character = player.Character
-        if not character then return nil end
-        return character:FindFirstChildOfClass("Humanoid")
-end
-
-RunService.RenderStepped:Connect(function()
-        if not GodMode then return end
-
-        local hum = godHumanoid()
-        if not hum then return end
-
-        if savedMaxHealth == nil then
-                savedMaxHealth = hum.MaxHealth
-        end
-
-        if hum.MaxHealth ~= math.huge then
-                hum.MaxHealth = math.huge
-        end
-
-        if hum.Health < hum.MaxHealth then
-                hum.Health = hum.MaxHealth
-        end
-end)
-
-player.CharacterAdded:Connect(function()
-        savedMaxHealth = nil
-end)
-
---==============================
--- DESTRUIR OBSTÁCULOS
---==============================
-
-local function destroyObstacles()
-        local character = player.Character
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-
-        local origin = root.Position
-
-        for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") and obj.Anchored and obj.Name ~= "HumanoidRootPart" then
-                        if not obj:IsA("SpawnLocation") then
-                                local parentModel = obj:FindFirstAncestorOfClass("Model")
-                                local isCharacter = parentModel and parentModel:FindFirstChildOfClass("Humanoid")
-
-                                if not isCharacter and (obj.Position - origin).Magnitude <= DESTROY_RADIUS then
-                                        local s = obj.Size
-                                        local isFloor = (s.Y <= s.X and s.Y <= s.Z)
-
-                                        if not isFloor then
-                                                pcall(function()
-                                                        obj:Destroy()
-                                                end)
-                                        end
-                                end
-                        end
-                end
-        end
-end
-
-task.spawn(function()
-        while true do
-                if DestroyWalls then
-                        destroyObstacles()
-                        task.wait(0.4)
-                else
-                        task.wait(0.1)
-                end
-        end
-end)
-
---==============================
--- MATAR
+-- MATAR / KILL AURA
 --==============================
 
 local function killTargets(radius)
@@ -1084,33 +1080,6 @@ xrayButton.Activated:Connect(function()
         else
                 disableXRay()
         end
-end)
-
-godButton.Activated:Connect(function()
-        GodMode = not GodMode
-        godButton.Text = GodMode and "🛡️ Modo Dios: ON" or "🛡️ Modo Dios: OFF"
-
-        local hum = godHumanoid()
-        if not GodMode then
-                if hum then
-                        hum.MaxHealth = savedMaxHealth or 100
-                        hum.Health = hum.MaxHealth
-                end
-                savedMaxHealth = nil
-        end
-end)
-
-destroyButton.Activated:Connect(function()
-        DestroyWalls = not DestroyWalls
-        destroyButton.Text = DestroyWalls and "💥 Destruir Obstáculos: ON" or "💥 Destruir Obstáculos: OFF"
-
-        if DestroyWalls then
-                destroyObstacles()
-        end
-end)
-
-killButton.Activated:Connect(function()
-        killTargets(KILL_RADIUS)
 end)
 
 tracerButton.Activated:Connect(function()

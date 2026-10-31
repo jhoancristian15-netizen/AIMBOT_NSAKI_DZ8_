@@ -20,10 +20,11 @@ local Aimbot = false
 local XRay = false
 local Noclip = false
 local Invisible = false
+local GodMode = false
+local DestroyWalls = false
 local BringAll = false          -- Bring Players / TP All
-local BringNPCs = false         -- Incluir NPCs y dummies
+local BringNPCs = false         -- Incluir NPCs y dummies (bring + kill)
 local AnchorBring = false       -- Anclar los traídos
-local Wallbang = false          -- Balas atraviesan paredes
 
 local FOV_MIN = 50
 local FOV_MAX = 300
@@ -33,8 +34,8 @@ local BRING_DISTANCE = 500      -- Distancia máxima para atraer
 local BRING_SPACING = 3.2       -- Separación entre enemigos
 local BRING_OFFSET = 8          -- Studs enfrente de ti
 
-local WALLBANG_MAX_WALL = 6     -- Grosor máximo de pared atravesable (studs)
-local WALLBANG_INCLUDE_NPCS = false -- También atravesar paredes hacia NPCs
+local KILL_RADIUS = 500         -- Radio para matar
+local DESTROY_RADIUS = 120      -- Radio para destruir obstáculos
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -196,10 +197,12 @@ local espButton = createButton("👁️ ESP Rainbow: OFF")
 local xrayButton = createButton("👻 X-Ray: OFF")
 local noclipButton = createButton("💨 Noclip: OFF")
 local invisibleButton = createButton("🌀 Invisible: OFF")
+local godButton = createButton("🛡️ Modo Dios: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
-local wallButton = createButton("🧱 Traspasar Paredes: OFF")
+local destroyButton = createButton("💥 Destruir Obstáculos: OFF")
+local killButton = createButton("💀 Matar Enemigos")
 
 --==============================
 -- FOV TEXTO
@@ -636,150 +639,124 @@ end
 
 task.spawn(function()
         while true do
-                if (Wallbang and WALLBANG_INCLUDE_NPCS) or BringNPCs then
+                if BringNPCs then
                         npcCache = scanNPCs()
                 end
                 task.wait(1)
-        end
+        end)
 end)
 
 --==============================
--- TRASPASAR PAREDES (WALLBANG REAL)
+-- MODO DIOS
 --==============================
 
-local FILTER_INCLUDE = Enum.RaycastFilterType.Include
-local FILTER_EXCLUDE = Enum.RaycastFilterType.Exclude
+local savedMaxHealth = nil
 
-local inCast = false
-local oldNamecall = nil
-
-local function characterList()
-        local list = {}
-
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 then
-                                table.insert(list, plr.Character)
-                        end
-                end
-        end
-
-        if WALLBANG_INCLUDE_NPCS then
-                for _, npc in ipairs(npcCache) do
-                        if npc.Parent then
-                                table.insert(list, npc)
-                        end
-                end
-        end
-
-        return list
+local function godHumanoid()
+        local character = player.Character
+        if not character then return nil end
+        return character:FindFirstChildOfClass("Humanoid")
 end
 
-local function makeParams(filterType, list)
-        local params = RaycastParams.new()
-        params.FilterType = filterType
-        params.FilterDescendantsInstances = list
-        params.IgnoreWater = true
-        return params
-end
+RunService.RenderStepped:Connect(function()
+        if not GodMode then return end
 
--- Devuelve el impacto en un personaje aunque haya paredes en medio
-local function wallbangCast(origin, direction)
-        local length = direction.Magnitude
-        if length < 0.1 then return nil end
+        local hum = godHumanoid()
+        if not hum then return end
 
-        local unit = direction.Unit
-        local chars = characterList()
-        if #chars == 0 then return nil end
-
-        -- 1) ¿Hay alguien en la línea? (solo personajes)
-        local charHit = workspace:Raycast(origin, direction, makeParams(FILTER_INCLUDE, chars))
-        if not charHit or not charHit.Instance then return nil end
-
-        local model = charHit.Instance:FindFirstAncestorOfClass("Model")
-        local hum = model and model:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Health <= 0 then return nil end
-
-        local travel = (charHit.Position - origin).Magnitude
-        if travel <= 0.1 then return charHit end
-
-        -- 2) Medir las paredes intermedias y descartar las demasiado gruesas
-        local worldParams = makeParams(FILTER_EXCLUDE, chars)
-        local cursor = origin
-        local used = 0
-
-        for _ = 1, 4 do
-                local remaining = travel - used
-                if remaining <= 0.05 then break end
-
-                local wallHit = workspace:Raycast(cursor, unit * remaining, worldParams)
-                if not wallHit then break end
-
-                local thickList = table.clone(chars)
-                table.insert(thickList, wallHit.Instance)
-                local exitHit = workspace:Raycast(
-                        wallHit.Position + unit * 0.01,
-                        unit * remaining,
-                        makeParams(FILTER_EXCLUDE, thickList)
-                )
-
-                local thickness
-                if exitHit then
-                        thickness = (exitHit.Position - wallHit.Position).Magnitude
-                else
-                        thickness = remaining
-                end
-
-                if thickness > WALLBANG_MAX_WALL then return nil end
-
-                cursor = wallHit.Position + unit * (thickness + 0.02)
-                used = (cursor - origin).Magnitude
+        if savedMaxHealth == nil then
+                savedMaxHealth = hum.MaxHealth
         end
 
-        return charHit
-end
+        if hum.MaxHealth ~= math.huge then
+                hum.MaxHealth = math.huge
+        end
 
--- Intercepta los raycasts del juego
-local function installWallbangHook()
-        if oldNamecall then return end
-        if not hookmetamethod then return end
+        if hum.Health < hum.MaxHealth then
+                hum.Health = hum.MaxHealth
+        end
+end)
 
-        local ok, original = pcall(hookmetamethod, game, "__namecall", function(self, ...)
-                local method = getnamecallmethod()
+player.CharacterAdded:Connect(function()
+        savedMaxHealth = nil
+end)
 
-                if Wallbang and not inCast and self == workspace then
-                        local args = { ... }
+--==============================
+-- DESTRUIR OBSTÁCULOS
+--==============================
 
-                        if method == "Raycast" then
-                                local origin, direction = args[1], args[2]
-                                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
-                                        inCast = true
-                                        local hit = wallbangCast(origin, direction)
-                                        inCast = false
-                                        if hit then return hit end
-                                end
+local function destroyObstacles()
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
 
-                        elseif method == "FindPartOnRay"
-                                or method == "FindPartOnRayWithIgnoreList"
-                                or method == "FindPartOnRayWithWhitelist" then
-                                local ray = args[1]
-                                if typeof(ray) == "Ray" then
-                                        inCast = true
-                                        local hit = wallbangCast(ray.Origin, ray.Direction)
-                                        inCast = false
-                                        if hit then
-                                                return hit.Instance, hit.Position, hit.Normal, hit.Material
+        local origin = root.Position
+
+        for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and obj.Anchored and obj.Name ~= "HumanoidRootPart" then
+                        if not obj:IsA("SpawnLocation") then
+                                local parentModel = obj:FindFirstAncestorOfClass("Model")
+                                local isCharacter = parentModel and parentModel:FindFirstChildOfClass("Humanoid")
+
+                                if not isCharacter and (obj.Position - origin).Magnitude <= DESTROY_RADIUS then
+                                        local s = obj.Size
+                                        local isFloor = (s.Y <= s.X and s.Y <= s.Z)
+
+                                        if not isFloor then
+                                                pcall(function()
+                                                        obj:Destroy()
+                                                end)
                                         end
                                 end
                         end
                 end
+        end
+end
 
-                return oldNamecall(self, ...)
-        end)
+task.spawn(function()
+        while true do
+                if DestroyWalls then
+                        destroyObstacles()
+                        task.wait(0.4)
+                else
+                        task.wait(0.1)
+                end
+        end
+end)
 
-        if ok then
-                oldNamecall = original
+--==============================
+-- MATAR ENEMIGOS
+--==============================
+
+local function killTargets()
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local origin = root.Position
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.Health > 0 and (hrp.Position - origin).Magnitude <= KILL_RADIUS then
+                                pcall(function()
+                                        hum.Health = 0
+                                end)
+                        end
+                end
+        end
+
+        if BringNPCs then
+                for _, npc in ipairs(npcCache) do
+                        local hum = npc:FindFirstChildOfClass("Humanoid")
+                        local hrp = npc.PrimaryPart or npc:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.Health > 0 and (hrp.Position - origin).Magnitude <= KILL_RADIUS then
+                                pcall(function()
+                                        hum.Health = 0
+                                end)
+                        end
+                end
         end
 end
 
@@ -897,14 +874,31 @@ xrayButton.Activated:Connect(function()
         end
 end)
 
-wallButton.Activated:Connect(function()
-        Wallbang = not Wallbang
-        wallButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
+godButton.Activated:Connect(function()
+        GodMode = not GodMode
+        godButton.Text = GodMode and "🛡️ Modo Dios: ON" or "🛡️ Modo Dios: OFF"
 
-        if Wallbang then
-                installWallbangHook()
-                npcCache = scanNPCs()
+        local hum = godHumanoid()
+        if not GodMode then
+                if hum then
+                        hum.MaxHealth = savedMaxHealth or 100
+                        hum.Health = hum.MaxHealth
+                end
+                savedMaxHealth = nil
         end
+end)
+
+destroyButton.Activated:Connect(function()
+        DestroyWalls = not DestroyWalls
+        destroyButton.Text = DestroyWalls and "💥 Destruir Obstáculos: ON" or "💥 Destruir Obstáculos: OFF"
+
+        if DestroyWalls then
+                destroyObstacles()
+        end
+end)
+
+killButton.Activated:Connect(function()
+        killTargets()
 end)
 
 bringButton.Activated:Connect(function()
@@ -978,6 +972,6 @@ end)
 
 print("🔥 NSAKI_DZ8 - Demon Edition cargado")
 print("👿 ESP Rainbow activo - Colores cambiantes")
-print("🌀 Invisibilidad agregada")
-print("🧲 Bring Players agregado - Enemigos enfrente de ti")
-print("🧱 Wallbang agregado - Balas atraviesan paredes reales")
+print("🛡️ Modo Dios agregado")
+print("💥 Destruir Obstáculos agregado")
+print("💀 Matar Enemigos agregado")

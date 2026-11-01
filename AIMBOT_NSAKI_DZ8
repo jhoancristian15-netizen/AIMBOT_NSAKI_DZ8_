@@ -38,11 +38,11 @@ local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 
-local MAX_WALL = 6          -- Grosor máximo atravesable (probado y funcional)
+local MAX_WALL = 6          -- Grosor máximo atravesable (Probado y funcional)
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
--- Compatibilidad de enum (Include/Exclude son nuevos)
+-- Compatibilidad de enum (Include/Exclude)
 local INCLUDE, EXCLUDE
 do
         local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
@@ -214,7 +214,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --==============================
--- CREACIÓN DE BOTONES
+-- BOTONES
 --==============================
 
 local function createButton(text)
@@ -382,6 +382,12 @@ local function createSlider(labelText, min, max, initial, onChange)
                         dragging = false
                 end
         end)
+
+        api.set = function(value)
+                local percent = math.clamp((value-min)/(max-min), 0, 1)
+                paint(percent)
+                label.Text = labelText..tostring(math.floor(value + 0.5))
+        end
 
         paint(math.clamp((initial-min)/(max-min), 0, 1))
         onChange(initial)
@@ -642,7 +648,7 @@ end
 --==================================================
 
 --==============================
--- WALLBANG + SILENT AIM
+-- UTILIDADES DE COMBATE (WALLBANG & SILENT AIM)
 --==============================
 
 local redirected = 0
@@ -720,7 +726,6 @@ local function wallbangCast(origin, direction)
                 local wall = workspace:Raycast(cursor, unit * remaining, world)
                 if not wall then break end
 
-                -- medir grosor: rayo corto hacia adelante ignorando ese muro
                 local probeList = table.clone(chars)
                 table.insert(probeList, wall.Instance)
                 local probe = workspace:Raycast(
@@ -740,6 +745,10 @@ local function wallbangCast(origin, direction)
 
         return hit
 end
+
+--==============================
+-- HOOK
+--==============================
 
 local guard = false
 local original
@@ -912,7 +921,7 @@ task.spawn(function()
 end)
 
 --==============================
--- CONEXIÓN DE BOTONES GUI
+-- CONEXIONES DE BOTONES GUI
 --==============================
 
 espButton.Activated:Connect(function()
@@ -1022,5 +1031,5 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🔥 NSAKI_DZ8 - Demon Edition cargado exitosamente con Wallbang funcional")
+print("🔥 NSAKI_DZ8 - Demon Edition cargado correctamente con Wallbang y Silent Aim funcionales")
 print("[NSAKI] Hook listo:", hooked)

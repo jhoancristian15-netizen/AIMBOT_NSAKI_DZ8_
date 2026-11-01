@@ -38,7 +38,8 @@ local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 
-local MAX_WALL = 6
+local MAX_WALL = 10          -- Grosor máximo atravesable
+local RAY_EXTEND = 800       -- Alarga el rayo del juego para alcanzar al enemigo
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -699,6 +700,34 @@ local function characters()
         return list
 end
 
+-- Cabeza más alineada con una dirección. NO usa el FOV del aimbot.
+local function headNear(origin, unit)
+        local best, bestDot = nil, -1
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        local head = plr.Character:FindFirstChild("Head")
+                        if hum and head and hum.Health > 0 then
+                                local to = head.Position - origin
+                                if to.Magnitude > 0.5 then
+                                        local dot = to.Unit:Dot(unit)
+                                        if dot > bestDot then
+                                                bestDot = dot
+                                                best = head
+                                        end
+                                end
+                        end
+                end
+        end
+
+        if best and bestDot > 0 then
+                return best
+        end
+        return nil
+end
+
+-- Cabeza más cercana al centro de la pantalla. Sin límite de FOV.
 local function closestHead()
         local cam = workspace.CurrentCamera
         if not cam then return nil end
@@ -734,16 +763,50 @@ local function params(filterType, list)
         return p
 end
 
+-- Mide el grosor de un muro avanzando a pasos cortos
+local function wallThickness(entry, part, unit, maxLen)
+        local list = table.clone(characters())
+        table.insert(list, part)
+        local p = params(EXCLUDE, list)
+
+        local acc = 0
+        while acc < maxLen do
+                local step = math.min(2, maxLen - acc)
+                local probe = workspace:Raycast(entry + unit * (acc + 0.02), unit * step, p)
+                if probe then
+                        local d = acc + (probe.Position - entry).Magnitude + 0.02
+                        return d, probe.Position + unit * 0.02
+                end
+                acc = acc + step
+        end
+
+        return nil
+end
+
 local function wallbangCast(origin, direction)
-        local len = direction.Magnitude
-        if len < 0.1 then return nil end
+        if direction.Magnitude < 0.1 then return nil end
 
         local unit = direction.Unit
         local chars = characters()
         if #chars == 0 then return nil end
 
-        local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
-        if not hit or not hit.Instance then return nil end
+        -- Alarga el rayo: muchos juegos disparan corto y nunca alcanzan al enemigo
+        local length = math.max(direction.Magnitude, RAY_EXTEND)
+        local dir = unit * length
+
+        local hit = workspace:Raycast(origin, dir, params(INCLUDE, chars))
+
+        -- Si no hay nadie en la línea exacta, apunta a la cabeza más alineada
+        if not hit then
+                local head = headNear(origin, unit)
+                if not head then return nil end
+
+                local toHead = head.Position - origin
+                dir = toHead.Unit * math.max(length, toHead.Magnitude + 50)
+                unit = dir.Unit
+                hit = workspace:Raycast(origin, dir, params(INCLUDE, chars))
+                if not hit then return nil end
+        end
 
         local travel = (hit.Position - origin).Magnitude
         if travel <= 0.1 then return hit end
@@ -752,27 +815,17 @@ local function wallbangCast(origin, direction)
         local cursor = origin
         local used = 0
 
-        for _ = 1, 4 do
+        for _ = 1, 5 do
                 local remaining = travel - used
                 if remaining <= 0.05 then break end
 
                 local wall = workspace:Raycast(cursor, unit * remaining, world)
                 if not wall then break end
 
-                local probeList = table.clone(chars)
-                table.insert(probeList, wall.Instance)
-                local probe = workspace:Raycast(
-                        wall.Position + unit * 0.02,
-                        unit * (MAX_WALL + 1),
-                        params(EXCLUDE, probeList)
-                )
+                local thickness, exitPos = wallThickness(wall.Position, wall.Instance, unit, MAX_WALL)
+                if not thickness then return nil end
 
-                if not probe then return nil end
-
-                local thickness = (probe.Position - wall.Position).Magnitude
-                if thickness > MAX_WALL then return nil end
-
-                cursor = probe.Position + unit * 0.02
+                cursor = exitPos
                 used = (cursor - origin).Magnitude
         end
 
@@ -796,7 +849,7 @@ local function install()
                         return original(self, ...)
                 end
 
-                -- REDIRIGIR BALAS
+                -- REDIRIGIR BALAS (independiente del FOV)
                 if SilentAim and self == workspace.CurrentCamera then
                         if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
                                 local head = closestHead()
@@ -1088,6 +1141,6 @@ openButton.Activated:Connect(function()
 end)
 
 print("🔥 NSAKI_DZ8 - Demon Edition cargado")
-print("🧱 Traspasar Paredes agregado")
-print("🔫 Redirigir Balas agregado")
+print("🧱 Traspasar Paredes corregido")
+print("🔫 Redirigir Balas sin límite de FOV")
 print("[NSAKI] hook listo:", hooked)

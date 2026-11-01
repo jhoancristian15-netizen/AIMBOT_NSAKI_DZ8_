@@ -39,8 +39,6 @@ local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 
 local MAX_WALL = 6
-local AIM_MAX_ANGLE = 45
-local MIN_RAY_LENGTH = 20
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -244,6 +242,8 @@ local invisibleButton = createButton("🌀 Invisible: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
+local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
+local silentButton = createButton("🔫 Redirigir Balas: OFF")
 
 --==============================
 -- CÍRCULO FOV
@@ -402,6 +402,13 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
         local cam = workspace.CurrentCamera
         if cam then
                 cam.FieldOfView = desiredFOV
+        end
+end)
+
+RunService.RenderStepped:Connect(function()
+        if fovCircle then
+                fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
+                fovCircle.Position = UDim2.fromScale(0.5,0.5)
         end
 end)
 --==================================================
@@ -664,7 +671,7 @@ end
 --==================================================
 
 --==============================
--- HOOKS DE DISPARO
+-- WALLBANG + SILENT AIM
 --==============================
 
 local INCLUDE, EXCLUDE
@@ -676,8 +683,8 @@ do
         EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
 end
 
-local guard = false
-local originalNamecall = nil
+local redirected = 0
+local hooked = false
 
 local function characters()
         local list = {}
@@ -692,30 +699,23 @@ local function characters()
         return list
 end
 
-local function makeParams(filterType, list)
-        local p = RaycastParams.new()
-        p.FilterType = filterType
-        p.FilterDescendantsInstances = list
-        p.IgnoreWater = true
-        return p
-end
+local function closestHead()
+        local cam = workspace.CurrentCamera
+        if not cam then return nil end
 
--- Busca la cabeza más alineada con el rayo (funciona en movimiento)
-local function bestHeadForRay(origin, direction)
-        local unit = direction.Unit
-        local best = nil
-        local bestAngle = math.rad(AIM_MAX_ANGLE)
+        local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+        local best, bestDist = nil, math.huge
 
         for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= player and plr.Character then
                         local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                         local head = plr.Character:FindFirstChild("Head")
                         if hum and head and hum.Health > 0 then
-                                local to = head.Position - origin
-                                if to.Magnitude > 0.5 then
-                                        local angle = math.acos(math.clamp(to.Unit:Dot(unit), -1, 1))
-                                        if angle < bestAngle then
-                                                bestAngle = angle
+                                local pos, vis = cam:WorldToViewportPoint(head.Position)
+                                if vis and pos.Z > 0 then
+                                        local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                                        if d < bestDist then
+                                                bestDist = d
                                                 best = head
                                         end
                                 end
@@ -726,6 +726,14 @@ local function bestHeadForRay(origin, direction)
         return best
 end
 
+local function params(filterType, list)
+        local p = RaycastParams.new()
+        p.FilterType = filterType
+        p.FilterDescendantsInstances = list
+        p.IgnoreWater = true
+        return p
+end
+
 local function wallbangCast(origin, direction)
         local len = direction.Magnitude
         if len < 0.1 then return nil end
@@ -734,13 +742,13 @@ local function wallbangCast(origin, direction)
         local chars = characters()
         if #chars == 0 then return nil end
 
-        local hit = workspace:Raycast(origin, direction, makeParams(INCLUDE, chars))
+        local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
         if not hit or not hit.Instance then return nil end
 
         local travel = (hit.Position - origin).Magnitude
         if travel <= 0.1 then return hit end
 
-        local world = makeParams(EXCLUDE, chars)
+        local world = params(EXCLUDE, chars)
         local cursor = origin
         local used = 0
 
@@ -756,7 +764,7 @@ local function wallbangCast(origin, direction)
                 local probe = workspace:Raycast(
                         wall.Position + unit * 0.02,
                         unit * (MAX_WALL + 1),
-                        makeParams(EXCLUDE, probeList)
+                        params(EXCLUDE, probeList)
                 )
 
                 if not probe then return nil end
@@ -771,27 +779,13 @@ local function wallbangCast(origin, direction)
         return hit
 end
 
-local function castRedirected(origin, direction)
-        local head = bestHeadForRay(origin, direction)
-        if not head then return nil, direction end
+local guard = false
+local original
 
-        local toHead = head.Position - origin
-        local newDirection = toHead.Unit * math.max(direction.Magnitude, toHead.Magnitude + 20)
-
-        if Wallbang then
-                return wallbangCast(origin, newDirection), newDirection
-        end
-
-        local chars = characters()
-        if #chars == 0 then return nil, newDirection end
-
-        return workspace:Raycast(origin, newDirection, makeParams(INCLUDE, chars)), newDirection
-end
-
-local function installHook()
-        if originalNamecall then return end
+local function install()
+        if original then return end
         if not hookmetamethod then
-                print("[NSAKI] sin hookmetamethod: wallbang y redirigido no disponibles")
+                print("[NSAKI] no hay hookmetamethod")
                 return
         end
 
@@ -799,89 +793,64 @@ local function installHook()
                 local method = getnamecallmethod()
 
                 if guard then
-                        return originalNamecall(self, ...)
+                        return original(self, ...)
                 end
 
-                if (Wallbang or SilentAim) and self == workspace then
+                -- REDIRIGIR BALAS
+                if SilentAim and self == workspace.CurrentCamera then
+                        if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                                local head = closestHead()
+                                if head then
+                                        local origin = workspace.CurrentCamera.CFrame.Position
+                                        redirected = redirected + 1
+                                        return Ray.new(origin, (head.Position - origin).Unit * 2000)
+                                end
+                        end
+                end
+
+                -- TRASPASAR PAREDES
+                if Wallbang and self == workspace then
                         local args = { ... }
 
                         if method == "Raycast" then
-                                local origin, direction = args[1], args[2]
-                                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3"
-                                        and direction.Magnitude >= MIN_RAY_LENGTH then
+                                if typeof(args[1]) == "Vector3" and typeof(args[2]) == "Vector3" then
                                         guard = true
-                                        local hit, newDirection = castRedirected(origin, direction)
+                                        local hit = wallbangCast(args[1], args[2])
                                         guard = false
-
-                                        if hit then return hit end
-                                        if newDirection then
-                                                return originalNamecall(self, origin, newDirection, args[3])
+                                        if hit then
+                                                redirected = redirected + 1
+                                                return hit
                                         end
                                 end
 
                         elseif method == "FindPartOnRay"
                                 or method == "FindPartOnRayWithIgnoreList"
                                 or method == "FindPartOnRayWithWhitelist" then
-                                local ray = args[1]
-                                if typeof(ray) == "Ray" and ray.Direction.Magnitude >= MIN_RAY_LENGTH then
+                                if typeof(args[1]) == "Ray" then
                                         guard = true
-                                        local hit, newDirection = castRedirected(ray.Origin, ray.Direction)
+                                        local hit = wallbangCast(args[1].Origin, args[1].Direction)
                                         guard = false
-
                                         if hit then
+                                                redirected = redirected + 1
                                                 return hit.Instance, hit.Position, hit.Normal, hit.Material
-                                        end
-                                        if newDirection then
-                                                return originalNamecall(self, Ray.new(ray.Origin, newDirection), ...)
-                                        end
-                                end
-
-                        elseif method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                                if SilentAim then
-                                        local cam = workspace.CurrentCamera
-                                        if cam then
-                                                local head = nil
-                                                local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
-                                                local bestDist = math.huge
-
-                                                for _, plr in ipairs(Players:GetPlayers()) do
-                                                        if plr ~= player and plr.Character then
-                                                                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                                                                local h = plr.Character:FindFirstChild("Head")
-                                                                if hum and h and hum.Health > 0 then
-                                                                        local pos, vis = cam:WorldToViewportPoint(h.Position)
-                                                                        if vis and pos.Z > 0 then
-                                                                                local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                                                                                if d < bestDist then
-                                                                                        bestDist = d
-                                                                                        head = h
-                                                                                end
-                                                                        end
-                                                                end
-                                                        end
-                                                end
-
-                                                if head then
-                                                        local origin = cam.CFrame.Position
-                                                        return Ray.new(origin, (head.Position - origin).Unit * 2000)
-                                                end
                                         end
                                 end
                         end
                 end
 
-                return originalNamecall(self, ...)
+                return original(self, ...)
         end)
 
         if ok then
-                originalNamecall = fn
-                print("[NSAKI] hook instalado")
+                original = fn
+                hooked = true
+                print("[NSAKI] hook instalado correctamente")
         else
                 print("[NSAKI] el hook falló:", fn)
         end
 end
 
-installHook()
+install()
 
 --==============================
 -- NPCs (CACHÉ)
@@ -1038,13 +1007,15 @@ end)
 wallbangButton.Activated:Connect(function()
         Wallbang = not Wallbang
         wallbangButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
-        if Wallbang then installHook() end
+        install()
+        print("[NSAKI] wallbang:", Wallbang)
 end)
 
 silentButton.Activated:Connect(function()
         SilentAim = not SilentAim
         silentButton.Text = SilentAim and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"
-        if SilentAim then installHook() end
+        install()
+        print("[NSAKI] redirigir:", SilentAim)
 end)
 
 bringButton.Activated:Connect(function()
@@ -1119,16 +1090,4 @@ end)
 print("🔥 NSAKI_DZ8 - Demon Edition cargado")
 print("🧱 Traspasar Paredes agregado")
 print("🔫 Redirigir Balas agregado")
---==============================
--- BOTONES DE DISPARO
---==============================
-
-local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
-local silentButton = createButton("🔫 Redirigir Balas: OFF")
-
-RunService.RenderStepped:Connect(function()
-        if fovCircle then
-                fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
-                fovCircle.Position = UDim2.fromScale(0.5,0.5)
-        end
-end)
+print("[NSAKI] hook listo:", hooked)

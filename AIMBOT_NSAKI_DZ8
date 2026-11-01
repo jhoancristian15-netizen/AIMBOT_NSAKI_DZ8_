@@ -1,5 +1,5 @@
 --==================================================
--- NSAKI_DZ8  |  PARTE 1 DE 3
+-- NSAKI_DZ8  |  DEMON EDITION (PARTE 1 DE 3)
 -- LocalScript
 -- StarterPlayer > StarterPlayerScripts
 --==================================================
@@ -38,10 +38,19 @@ local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 
-local MAX_WALL = 10          -- Grosor máximo atravesable
-local RAY_EXTEND = 800       -- Alarga el rayo del juego para alcanzar al enemigo
+local MAX_WALL = 6          -- Grosor máximo atravesable (probado y funcional)
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
+
+-- Compatibilidad de enum (Include/Exclude son nuevos)
+local INCLUDE, EXCLUDE
+do
+        local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
+        INCLUDE = ok1 and v1 or Enum.RaycastFilterType.Whitelist
+
+        local ok2, v2 = pcall(function() return Enum.RaycastFilterType.Exclude end)
+        EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
+end
 
 --==============================
 -- GUI
@@ -205,7 +214,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --==============================
--- BOTONES
+-- CREACIÓN DE BOTONES
 --==============================
 
 local function createButton(text)
@@ -374,12 +383,6 @@ local function createSlider(labelText, min, max, initial, onChange)
                 end
         end)
 
-        api.set = function(value)
-                local percent = math.clamp((value-min)/(max-min), 0, 1)
-                paint(percent)
-                label.Text = labelText..tostring(math.floor(value + 0.5))
-        end
-
         paint(math.clamp((initial-min)/(max-min), 0, 1))
         onChange(initial)
 
@@ -413,7 +416,7 @@ RunService.RenderStepped:Connect(function()
         end
 end)
 --==================================================
--- NSAKI_DZ8  |  PARTE 2 DE 3
+-- NSAKI_DZ8  |  DEMON EDITION (PARTE 2 DE 3)
 --==================================================
 
 --==============================
@@ -456,7 +459,6 @@ end
 
 local function updateRainbowColors()
         if not ESP then return end
-
         local hue = (tick() * 0.2) % 1
 
         for _, plr in ipairs(Players:GetPlayers()) do
@@ -474,9 +476,7 @@ local function updateESP()
         for _,plr in ipairs(Players:GetPlayers()) do
                 if plr ~= player then
                         if ESP then
-                                if plr.Character then
-                                        addESP(plr.Character)
-                                end
+                                if plr.Character then addESP(plr.Character) end
                         else
                                 removeESP(plr.Character)
                         end
@@ -486,29 +486,17 @@ end
 
 local function setupESPPlayer(plr)
         if plr == player then return end
-
         plr.CharacterAdded:Connect(function(character)
                 character:WaitForChild("Humanoid", 5)
                 task.wait(0.2)
-                if ESP then
-                        addESP(character)
-                end
+                if ESP then addESP(character) end
         end)
-
-        if ESP and plr.Character then
-                addESP(plr.Character)
-        end
+        if ESP and plr.Character then addESP(plr.Character) end
 end
 
-for _,plr in ipairs(Players:GetPlayers()) do
-        setupESPPlayer(plr)
-end
-
+for _,plr in ipairs(Players:GetPlayers()) do setupESPPlayer(plr) end
 Players.PlayerAdded:Connect(setupESPPlayer)
-
-Players.PlayerRemoving:Connect(function(plr)
-        removeESP(plr.Character)
-end)
+Players.PlayerRemoving:Connect(function(plr) removeESP(plr.Character) end)
 
 RunService.RenderStepped:Connect(function()
         updateRainbowColors()
@@ -520,7 +508,6 @@ end)
 
 local function setInvisible()
         if not Invisible then return end
-
         local character = player.Character
         if not character then return end
 
@@ -529,22 +516,16 @@ local function setInvisible()
                         part.Transparency = 1
                         part.CanCollide = false
                 end
-
                 if part:IsA("Accessory") or part:IsA("Hat") then
-                        if part:FindFirstChild("Handle") then
-                                part.Handle.Transparency = 1
-                        end
+                        if part:FindFirstChild("Handle") then part.Handle.Transparency = 1 end
                 end
-
                 if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
                         part.Transparency = 1
                 end
         end
 
         local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-                humanoid.BreakJointsOnDeath = false
-        end
+        if humanoid then humanoid.BreakJointsOnDeath = false end
 end
 
 local function setVisible()
@@ -556,13 +537,9 @@ local function setVisible()
                         part.Transparency = 0
                         part.CanCollide = true
                 end
-
                 if part:IsA("Accessory") or part:IsA("Hat") then
-                        if part:FindFirstChild("Handle") then
-                                part.Handle.Transparency = 0
-                        end
+                        if part:FindFirstChild("Handle") then part.Handle.Transparency = 0 end
                 end
-
                 if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
                         part.Transparency = 0
                 end
@@ -570,9 +547,7 @@ local function setVisible()
 end
 
 RunService.RenderStepped:Connect(function()
-        if Invisible then
-                setInvisible()
-        end
+        if Invisible then setInvisible() end
 end)
 
 --==============================
@@ -581,14 +556,11 @@ end)
 
 RunService.Stepped:Connect(function()
         if not Noclip then return end
-
         local character = player.Character
         if not character then return end
 
         for _,part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                        part.CanCollide = false
-                end
+                if part:IsA("BasePart") then part.CanCollide = false end
         end
 end)
 
@@ -623,13 +595,11 @@ local function getClosestHead()
                         end
                 end
         end
-
         return closest
 end
 
 RunService.RenderStepped:Connect(function()
         if not Aimbot then return end
-
         camera = workspace.CurrentCamera
         if not camera then return end
 
@@ -668,21 +638,12 @@ local function disableXRay()
         table.clear(xrayParts)
 end
 --==================================================
--- NSAKI_DZ8  |  PARTE 3 DE 3
+-- NSAKI_DZ8  |  DEMON EDITION (PARTE 3 DE 3)
 --==================================================
 
 --==============================
 -- WALLBANG + SILENT AIM
 --==============================
-
-local INCLUDE, EXCLUDE
-do
-        local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
-        INCLUDE = ok1 and v1 or Enum.RaycastFilterType.Whitelist
-
-        local ok2, v2 = pcall(function() return Enum.RaycastFilterType.Exclude end)
-        EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
-end
 
 local redirected = 0
 local hooked = false
@@ -700,34 +661,6 @@ local function characters()
         return list
 end
 
--- Cabeza más alineada con una dirección. NO usa el FOV del aimbot.
-local function headNear(origin, unit)
-        local best, bestDot = nil, -1
-
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        local head = plr.Character:FindFirstChild("Head")
-                        if hum and head and hum.Health > 0 then
-                                local to = head.Position - origin
-                                if to.Magnitude > 0.5 then
-                                        local dot = to.Unit:Dot(unit)
-                                        if dot > bestDot then
-                                                bestDot = dot
-                                                best = head
-                                        end
-                                end
-                        end
-                end
-        end
-
-        if best and bestDot > 0 then
-                return best
-        end
-        return nil
-end
-
--- Cabeza más cercana al centro de la pantalla. Sin límite de FOV.
 local function closestHead()
         local cam = workspace.CurrentCamera
         if not cam then return nil end
@@ -751,7 +684,6 @@ local function closestHead()
                         end
                 end
         end
-
         return best
 end
 
@@ -763,50 +695,16 @@ local function params(filterType, list)
         return p
 end
 
--- Mide el grosor de un muro avanzando a pasos cortos
-local function wallThickness(entry, part, unit, maxLen)
-        local list = table.clone(characters())
-        table.insert(list, part)
-        local p = params(EXCLUDE, list)
-
-        local acc = 0
-        while acc < maxLen do
-                local step = math.min(2, maxLen - acc)
-                local probe = workspace:Raycast(entry + unit * (acc + 0.02), unit * step, p)
-                if probe then
-                        local d = acc + (probe.Position - entry).Magnitude + 0.02
-                        return d, probe.Position + unit * 0.02
-                end
-                acc = acc + step
-        end
-
-        return nil
-end
-
 local function wallbangCast(origin, direction)
-        if direction.Magnitude < 0.1 then return nil end
+        local len = direction.Magnitude
+        if len < 0.1 then return nil end
 
         local unit = direction.Unit
         local chars = characters()
         if #chars == 0 then return nil end
 
-        -- Alarga el rayo: muchos juegos disparan corto y nunca alcanzan al enemigo
-        local length = math.max(direction.Magnitude, RAY_EXTEND)
-        local dir = unit * length
-
-        local hit = workspace:Raycast(origin, dir, params(INCLUDE, chars))
-
-        -- Si no hay nadie en la línea exacta, apunta a la cabeza más alineada
-        if not hit then
-                local head = headNear(origin, unit)
-                if not head then return nil end
-
-                local toHead = head.Position - origin
-                dir = toHead.Unit * math.max(length, toHead.Magnitude + 50)
-                unit = dir.Unit
-                hit = workspace:Raycast(origin, dir, params(INCLUDE, chars))
-                if not hit then return nil end
-        end
+        local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
+        if not hit or not hit.Instance then return nil end
 
         local travel = (hit.Position - origin).Magnitude
         if travel <= 0.1 then return hit end
@@ -815,17 +713,28 @@ local function wallbangCast(origin, direction)
         local cursor = origin
         local used = 0
 
-        for _ = 1, 5 do
+        for _ = 1, 4 do
                 local remaining = travel - used
                 if remaining <= 0.05 then break end
 
                 local wall = workspace:Raycast(cursor, unit * remaining, world)
                 if not wall then break end
 
-                local thickness, exitPos = wallThickness(wall.Position, wall.Instance, unit, MAX_WALL)
-                if not thickness then return nil end
+                -- medir grosor: rayo corto hacia adelante ignorando ese muro
+                local probeList = table.clone(chars)
+                table.insert(probeList, wall.Instance)
+                local probe = workspace:Raycast(
+                        wall.Position + unit * 0.02,
+                        unit * (MAX_WALL + 1),
+                        params(EXCLUDE, probeList)
+                )
 
-                cursor = exitPos
+                if not probe then return nil end
+
+                local thickness = (probe.Position - wall.Position).Magnitude
+                if thickness > MAX_WALL then return nil end
+
+                cursor = probe.Position + unit * 0.02
                 used = (cursor - origin).Magnitude
         end
 
@@ -849,7 +758,7 @@ local function install()
                         return original(self, ...)
                 end
 
-                -- REDIRIGIR BALAS (independiente del FOV)
+                -- SILENT AIM
                 if SilentAim and self == workspace.CurrentCamera then
                         if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
                                 local head = closestHead()
@@ -861,7 +770,7 @@ local function install()
                         end
                 end
 
-                -- TRASPASAR PAREDES
+                -- WALLBANG
                 if Wallbang and self == workspace then
                         local args = { ... }
 
@@ -913,43 +822,36 @@ local npcCache = {}
 
 local function scanNPCs()
         local found = {}
-
         local function scan(container, depth)
                 if depth > 2 then return end
                 for _, obj in ipairs(container:GetChildren()) do
                         if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
                                 if not Players:GetPlayerFromCharacter(obj) and obj ~= player.Character then
                                         local hum = obj:FindFirstChildOfClass("Humanoid")
-                                        if hum and hum.Health > 0 then
-                                                table.insert(found, obj)
-                                        end
+                                        if hum and hum.Health > 0 then table.insert(found, obj) end
                                 end
                         elseif obj:IsA("Folder") or obj:IsA("Model") then
                                 scan(obj, depth + 1)
                         end
                 end
         end
-
         scan(workspace, 0)
         return found
 end
 
 task.spawn(function()
         while true do
-                if BringNPCs then
-                        npcCache = scanNPCs()
-                end
+                if BringNPCs then npcCache = scanNPCs() end
                 task.wait(1)
         end
 end)
 
 --==============================
--- BRING PLAYERS
+-- BRING PLAYERS / NPCS
 --==============================
 
 local function collectTargets()
         local targets = {}
-
         for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= player and plr.Character then
                         local hum = plr.Character:FindFirstChildOfClass("Humanoid")
@@ -967,14 +869,12 @@ local function collectTargets()
                         end
                 end
         end
-
         return targets
 end
 
 local function bringTargets()
         local character = player.Character
         if not character then return end
-
         local myHRP = character:FindFirstChild("HumanoidRootPart")
         if not myHRP then return end
 
@@ -982,7 +882,6 @@ local function bringTargets()
         local look = myHRP.CFrame.LookVector
         local right = myHRP.CFrame.RightVector
         local basePos = origin + look * BRING_OFFSET
-
         local placed = 0
 
         for _, target in ipairs(collectTargets()) do
@@ -995,13 +894,7 @@ local function bringTargets()
                         pos = Vector3.new(pos.X, origin.Y + 2, pos.Z)
 
                         target:PivotTo(CFrame.lookAt(pos, Vector3.new(origin.X, pos.Y, origin.Z)))
-
-                        if AnchorBring then
-                                hrp.Anchored = true
-                        else
-                                hrp.Anchored = false
-                        end
-
+                        hrp.Anchored = AnchorBring
                         placed = placed + 1
                 end
         end
@@ -1019,7 +912,7 @@ task.spawn(function()
 end)
 
 --==============================
--- BOTONES
+-- CONEXIÓN DE BOTONES GUI
 --==============================
 
 espButton.Activated:Connect(function()
@@ -1041,20 +934,13 @@ end)
 invisibleButton.Activated:Connect(function()
         Invisible = not Invisible
         invisibleButton.Text = Invisible and "🌀 Invisible: ON" or "🌀 Invisible: OFF"
-
-        if not Invisible then
-                setVisible()
-        end
+        if not Invisible then setVisible() end
 end)
 
 xrayButton.Activated:Connect(function()
         XRay = not XRay
         xrayButton.Text = XRay and "👻 X-Ray: ON" or "👻 X-Ray: OFF"
-        if XRay then
-                enableXRay()
-        else
-                disableXRay()
-        end
+        if XRay then enableXRay() else disableXRay() end
 end)
 
 wallbangButton.Activated:Connect(function()
@@ -1074,16 +960,13 @@ end)
 bringButton.Activated:Connect(function()
         BringAll = not BringAll
         bringButton.Text = BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"
-
         if BringAll then
                 bringTargets()
-        else
-                if AnchorBring then
-                        for _, plr in ipairs(Players:GetPlayers()) do
-                                if plr ~= player and plr.Character then
-                                        local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                                        if hrp then hrp.Anchored = false end
-                                end
+        elseif AnchorBring then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                        if plr ~= player and plr.Character then
+                                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                                if hrp then hrp.Anchored = false end
                         end
                 end
         end
@@ -1098,7 +981,6 @@ end)
 anchorButton.Activated:Connect(function()
         AnchorBring = not AnchorBring
         anchorButton.Text = AnchorBring and "🔒 Anclar Traídos: ON" or "🔒 Anclar Traídos: OFF"
-
         if not AnchorBring then
                 for _, plr in ipairs(Players:GetPlayers()) do
                         if plr ~= player and plr.Character then
@@ -1140,7 +1022,5 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🔥 NSAKI_DZ8 - Demon Edition cargado")
-print("🧱 Traspasar Paredes corregido")
-print("🔫 Redirigir Balas sin límite de FOV")
-print("[NSAKI] hook listo:", hooked)
+print("🔥 NSAKI_DZ8 - Demon Edition cargado exitosamente con Wallbang funcional")
+print("[NSAKI] Hook listo:", hooked)

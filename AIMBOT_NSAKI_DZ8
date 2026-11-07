@@ -25,6 +25,7 @@ local BringNPCs = false
 local AnchorBring = false
 local Wallbang = false
 local SilentAim = false
+local KnifeStorm = false    -- NUEVO: Lluvia de cuchillos
 
 local FOV_MIN = 50
 local FOV_MAX = 300
@@ -38,7 +39,7 @@ local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 
-local MAX_WALL = 6          -- Grosor máximo atravesable (Probado y funcional)
+local MAX_WALL = 6          -- Grosor máximo atravesable
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -254,6 +255,7 @@ local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
 local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
 local silentButton = createButton("🔫 Redirigir Balas: OFF")
+local knifeButton = createButton("🔪 Lluvia de Cuchillos: OFF") -- NUEVO BOTÓN
 
 --==============================
 -- CÍRCULO FOV
@@ -784,27 +786,16 @@ local function install()
                         local args = { ... }
 
                         if method == "Raycast" then
-                                if typeof(args[1]) == "Vector3" and typeof(args[2]) == "Vector3" then
-                                        guard = true
-                                        local hit = wallbangCast(args[1], args[2])
-                                        guard = false
-                                        if hit then
-                                                redirected = redirected + 1
-                                                return hit
-                                        end
+                                local hit = wallbangCast(args[1], args[2])
+                                if hit then
+                                        redirected = redirected + 1
+                                        return hit
                                 end
-
-                        elseif method == "FindPartOnRay"
-                                or method == "FindPartOnRayWithIgnoreList"
-                                or method == "FindPartOnRayWithWhitelist" then
-                                if typeof(args[1]) == "Ray" then
-                                        guard = true
-                                        local hit = wallbangCast(args[1].Origin, args[1].Direction)
-                                        guard = false
-                                        if hit then
-                                                redirected = redirected + 1
-                                                return hit.Instance, hit.Position, hit.Normal, hit.Material
-                                        end
+                        elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
+                                local hit = wallbangCast(args[1].Origin, args[1].Direction)
+                                if hit then
+                                        redirected = redirected + 1
+                                        return hit.Instance, hit.Position, hit.Normal, hit.Material
                                 end
                         end
                 end
@@ -815,13 +806,55 @@ local function install()
         if ok then
                 original = fn
                 hooked = true
-                print("[NSAKI] hook instalado correctamente")
-        else
-                print("[NSAKI] el hook falló:", fn)
         end
 end
 
 install()
+
+--==============================
+-- LLUVIA DE CUCHILLOS (KNIFE STORM)
+--==============================
+
+local function triggerKnifeStorm()
+        if not KnifeStorm then return end
+        local character = player.Character
+        if not character then return end
+
+        local tool = character:FindFirstChildOfClass("Tool")
+        if not tool then
+                -- Si no lo tiene equipado, buscar en el inventario (Backpack)
+                tool = player.Backpack:FindFirstChildOfClass("Tool")
+        end
+
+        if tool then
+                -- Disparar los eventos remotos internos del cuchillo múltiples veces en ráfaga
+                for _, descendant in ipairs(tool:GetDescendants()) do
+                        if descendant:IsA("RemoteEvent") then
+                                for i = 1, 8 do
+                                        pcall(function()
+                                                descendant:FireServer(camera.CFrame)
+                                        end)
+                                end
+                                break
+                        end
+                end
+                -- Activar la herramienta directamente de forma programática
+                pcall(function()
+                        tool:Activate()
+                end)
+        end
+end
+
+task.spawn(function()
+        while true do
+                if KnifeStorm then
+                        triggerKnifeStorm()
+                        task.wait(0.05) -- Velocidad de spam ultra rápida
+                else
+                        task.wait(0.2)
+                end
+        end
+end)
 
 --==============================
 -- NPCs (CACHÉ)
@@ -956,14 +989,17 @@ wallbangButton.Activated:Connect(function()
         Wallbang = not Wallbang
         wallbangButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
         install()
-        print("[NSAKI] wallbang:", Wallbang)
 end)
 
 silentButton.Activated:Connect(function()
         SilentAim = not SilentAim
         silentButton.Text = SilentAim and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"
         install()
-        print("[NSAKI] redirigir:", SilentAim)
+end)
+
+knifeButton.Activated:Connect(function()
+        KnifeStorm = not KnifeStorm
+        knifeButton.Text = KnifeStorm and "🔪 Lluvia de Cuchillos: ON" or "🔪 Lluvia de Cuchillos: OFF"
 end)
 
 bringButton.Activated:Connect(function()
@@ -1031,5 +1067,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🔥 NSAKI_DZ8 - Demon Edition cargado correctamente con Wallbang y Silent Aim funcionales")
-print("[NSAKI] Hook listo:", hooked)
+print("🔥 NSAKI_DZ8 - Demon Edition cargado con Lluvia de Cuchillos")

@@ -1,5 +1,5 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 3 (REDESIGN: NEGRO Y BLANCO)
+-- DARKSHIELD  |  PARTE 1 DE 4
 -- LocalScript | StarterPlayer > StarterPlayerScripts
 --==================================================
 
@@ -30,10 +30,6 @@ local FOV_MIN = 50
 local FOV_MAX = 300
 local FOVRadius = 150
 
-local CAMFOV_MIN = 40
-local CAMFOV_MAX = 120
-local desiredFOV = 70
-
 local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
@@ -53,7 +49,7 @@ do
 end
 
 --==============================
--- GUI (ESTILO NEGRO Y BLANCO / AMPLIADO)
+-- GUI (ESTILO DECORATIVO B&W)
 --==============================
 
 local gui = Instance.new("ScreenGui")
@@ -62,9 +58,9 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(340, 620) -- Más grande y amplio para que todo encaje perfecto
+main.Size = UDim2.fromOffset(340, 620)
 main.Position = UDim2.new(0.5, -170, 0.5, -310)
-main.BackgroundColor3 = Color3.fromRGB(8, 8, 8) -- Negro puro profundo
+main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 main.BackgroundTransparency = 0.05
 main.BorderSizePixel = 0
 main.ClipsDescendants = true
@@ -72,16 +68,26 @@ main.ZIndex = 5
 main.Parent = gui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.CornerRadius = UDim.new(0, 14)
 mainCorner.Parent = main
 
--- Borde exterior blanco fino para contraste moderno
 local mainStroke = Instance.new("UIStroke")
 mainStroke.Thickness = 1.5
-mainStroke.Color = Color3.fromRGB(60, 60, 60)
+mainStroke.Color = Color3.fromRGB(90, 90, 90)
 mainStroke.Parent = main
 
--- Barra superior de acento en blanco puro
+local mainGradient = Instance.new("UIGradient")
+mainGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 150))
+})
+mainGradient.Rotation = 45
+mainGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.85),
+        NumberSequenceKeypoint.new(1, 0.95)
+})
+mainGradient.Parent = main
+
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 4)
 topBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -89,68 +95,68 @@ topBar.BorderSizePixel = 0
 topBar.ZIndex = 6
 topBar.Parent = main
 
---==============================
--- TÍTULO Y DESCRIPCIÓN (DARKSHIELD)
---==============================
+-- Botón de cerrar reubicado arriba a la izquierda
+local close = Instance.new("TextButton")
+close.Size = UDim2.fromOffset(28, 28)
+close.Position = UDim2.fromOffset(14, 14)
+close.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+close.BackgroundTransparency = 0.2
+close.Text = "✕"
+close.TextColor3 = Color3.fromRGB(255, 255, 255)
+close.TextSize = 14
+close.Font = Enum.Font.GothamBold
+close.ZIndex = 7
+close.Parent = main
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = close
+
+local closeStroke = Instance.new("UIStroke")
+closeStroke.Thickness = 1
+closeStroke.Color = Color3.fromRGB(120, 120, 120)
+closeStroke.Parent = close
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -70, 0, 35)
-title.Position = UDim2.fromOffset(16, 14)
+title.Size = UDim2.new(1, -60, 0, 30)
+title.Position = UDim2.fromOffset(52, 12)
 title.BackgroundTransparency = 1
 title.Text = "DARKSHIELD"
-title.TextColor3 = Color3.fromRGB(255, 255, 255) -- Blanco puro
-title.TextSize = 24
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 22
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.ZIndex = 6
 title.Parent = main
 
 local creator = Instance.new("TextLabel")
-creator.Size = UDim2.new(1, -70, 0, 18)
-creator.Position = UDim2.fromOffset(16, 48)
+creator.Size = UDim2.new(1, -60, 0, 16)
+creator.Position = UDim2.fromOffset(52, 40)
 creator.BackgroundTransparency = 1
 creator.Text = "CREATED BY NSAKI_DZHUB"
-creator.TextColor3 = Color3.fromRGB(170, 170, 170) -- Gris claro
-creator.TextSize = 11
+creator.TextColor3 = Color3.fromRGB(160, 160, 160)
+creator.TextSize = 10
 creator.Font = Enum.Font.GothamBold
 creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
 creator.Parent = main
 
--- Botón de cerrar (Ubicado cómodamente gracias al nuevo tamaño)
-local close = Instance.new("TextButton")
-close.Size = UDim2.fromOffset(36, 36)
-close.Position = UDim2.new(1, -48, 0, 16)
-close.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-close.BackgroundTransparency = 0.2
-close.Text = "✕"
-close.TextColor3 = Color3.fromRGB(255, 255, 255)
-close.TextSize = 16
-close.Font = Enum.Font.GothamBold
-close.ZIndex = 7
-close.Parent = main
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
-closeCorner.Parent = close
-
-local closeStroke = Instance.new("UIStroke")
-closeStroke.Thickness = 1
-closeStroke.Color = Color3.fromRGB(90, 90, 90)
-closeStroke.Parent = close
-
---==============================
--- ZONA DESPLAZABLE
---==============================
+local separator = Instance.new("Frame")
+separator.Size = UDim2.new(1, -32, 0, 1)
+separator.Position = UDim2.new(0, 16, 0, 68)
+separator.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+separator.BorderSizePixel = 0
+separator.ZIndex = 6
+separator.Parent = main
 
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 1, -80)
-scroll.Position = UDim2.fromOffset(0, 80)
+scroll.Size = UDim2.new(1, 0, 1, -78)
+scroll.Position = UDim2.fromOffset(0, 78)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-scroll.ScrollBarThickness = 4
+scroll.ScrollBarThickness = 3
 scroll.ScrollBarImageColor3 = Color3.fromRGB(220, 220, 220)
 scroll.ScrollBarImageTransparency = 0.3
 scroll.ClipsDescendants = true
@@ -160,7 +166,7 @@ scroll.Parent = main
 local scrollPad = Instance.new("UIPadding")
 scrollPad.PaddingLeft = UDim.new(0, 16)
 scrollPad.PaddingRight = UDim.new(0, 16)
-scrollPad.PaddingTop = UDim.new(0, 6)
+scrollPad.PaddingTop = UDim.new(0, 8)
 scrollPad.PaddingBottom = UDim.new(0, 20)
 scrollPad.Parent = scroll
 
@@ -208,90 +214,6 @@ RunService.RenderStepped:Connect(function()
         end
 end)
 
---==============================
--- BOTONES (ESTILO NEGRO Y BLANCO)
---==============================
-
-local function createButton(text)
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1, 0, 0, 42)
-        button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-        button.BackgroundTransparency = 0.15
-        button.BorderSizePixel = 0
-        button.Text = text
-        button.TextColor3 = Color3.fromRGB(240, 240, 240)
-        button.TextSize = 13.5
-        button.Font = Enum.Font.GothamMedium
-        button.ZIndex = 6
-        button.Parent = scroll
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = button
-
-        local stroke = Instance.new("UIStroke")
-        stroke.Thickness = 1
-        stroke.Color = Color3.fromRGB(45, 45, 45)
-        stroke.Parent = button
-
-        button.MouseEnter:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-                stroke.Color = Color3.fromRGB(150, 150, 150)
-        end)
-        button.MouseLeave:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-                stroke.Color = Color3.fromRGB(45, 45, 45)
-        end)
-
-        return button
-end
-
-local aimbotButton = createButton("🎯 Aimbot: OFF")
-local espButton = createButton("👁️ ESP Rainbow: OFF")
-local xrayButton = createButton("👻 X-Ray: OFF")
-local noclipButton = createButton("💨 Noclip: OFF")
-local invisibleButton = createButton("🌀 Invisible: OFF")
-local bringButton = createButton("🧲 Traer Enemigos: OFF")
-local npcButton = createButton("🤖 Incluir NPCs: OFF")
-local anchorButton = createButton("🔒 Anclar Traídos: OFF")
-local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
-local silentButton = createButton("🔫 Redirigir Balas: OFF")
-local knifeButton = createButton("🔪 Lluvia de Cuchillos: OFF")
-
---==============================
--- CÍRCULO FOV
---==============================
-
-local fovCircle = Instance.new("Frame")
-fovCircle.Name = "FOVCircle"
-fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-fovCircle.Position = UDim2.fromScale(0.5, 0.5)
-fovCircle.BackgroundTransparency = 1
-fovCircle.BorderSizePixel = 0
-fovCircle.Active = false
-fovCircle.Selectable = false
-fovCircle.ZIndex = 3
-fovCircle.Parent = gui
-
-local circleCorner = Instance.new("UICorner")
-circleCorner.CornerRadius = UDim.new(1, 0)
-circleCorner.Parent = fovCircle
-
-local circleStroke = Instance.new("UIStroke")
-circleStroke.Thickness = 2
-circleStroke.Color = Color3.fromRGB(255, 255, 255)
-circleStroke.Parent = fovCircle
-
-local function updateFOV()
-        fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-        fovCircle.Position = UDim2.fromScale(0.5, 0.5)
-        fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
-end
-
---==============================
--- SLIDERS (ESTILO NEGRO Y BLANCO)
---==============================
-
 local function createSlider(labelText, min, max, initial, onChange)
         local holder = Instance.new("Frame")
         holder.Size = UDim2.new(1, 0, 0, 50)
@@ -303,7 +225,7 @@ local function createSlider(labelText, min, max, initial, onChange)
         label.Size = UDim2.new(1, 0, 0, 20)
         label.BackgroundTransparency = 1
         label.Text = labelText..tostring(initial)
-        label.TextColor3 = Color3.fromRGB(210, 210, 210)
+        label.TextColor3 = Color3.fromRGB(240, 240, 240)
         label.TextSize = 13
         label.Font = Enum.Font.GothamSemibold
         label.TextXAlignment = Enum.TextXAlignment.Left
@@ -336,7 +258,7 @@ local function createSlider(labelText, min, max, initial, onChange)
         local knob = Instance.new("Frame")
         knob.Size = UDim2.fromOffset(16, 16)
         knob.AnchorPoint = Vector2.new(0.5, 0.5)
-        knob.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+        knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         knob.BorderSizePixel = 0
         knob.ZIndex = 7
         knob.Parent = bar
@@ -398,40 +320,100 @@ local function createSlider(labelText, min, max, initial, onChange)
         return api
 end
 
-local aimFovSlider = createSlider("🎯 FOV: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
+local aimFovSlider = createSlider("🎯 FOV Aimbot: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
         FOVRadius = value
-        updateFOV()
 end)
+--==================================================
+-- DARKSHIELD  |  PARTE 2 DE 4
+--==================================================
 
-local camFovSlider = createSlider("📷 FOV Cámara: ", CAMFOV_MIN, CAMFOV_MAX, desiredFOV, function(value)
-        desiredFOV = value
-        local cam = workspace.CurrentCamera
-        if cam then
-                cam.FieldOfView = value
-        end
-end)
+local function createButton(text)
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, 0, 0, 42)
+        button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+        button.BackgroundTransparency = 0.15
+        button.BorderSizePixel = 0
+        button.Text = text
+        button.TextColor3 = Color3.fromRGB(240, 240, 240)
+        button.TextSize = 13.5
+        button.Font = Enum.Font.GothamMedium
+        button.ZIndex = 6
+        button.Parent = scroll
 
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-        local cam = workspace.CurrentCamera
-        if cam then
-                cam.FieldOfView = desiredFOV
-        end
-end)
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = button
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 1
+        stroke.Color = Color3.fromRGB(45, 45, 45)
+        stroke.Parent = button
+
+        local btnGradient = Instance.new("UIGradient")
+        btnGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180))
+        })
+        btnGradient.Rotation = 90
+        btnGradient.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.9),
+                NumberSequenceKeypoint.new(1, 0.98)
+        })
+        btnGradient.Parent = button
+
+        button.MouseEnter:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+                stroke.Color = Color3.fromRGB(180, 180, 180)
+        end)
+        button.MouseLeave:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+                stroke.Color = Color3.fromRGB(45, 45, 45)
+        end)
+
+        return button
+end
+
+local aimbotButton = createButton("🎯 Aimbot: OFF")
+local espButton = createButton("👁️ ESP Rainbow: OFF")
+local xrayButton = createButton("👻 X-Ray: OFF")
+local noclipButton = createButton("💨 Noclip: OFF")
+local invisibleButton = createButton("🌀 Invisible: OFF")
+local bringButton = createButton("🧲 Traer Enemigos: OFF")
+local npcButton = createButton("🤖 Incluir NPCs: OFF")
+local anchorButton = createButton("🔒 Anclar Traídos: OFF")
+local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
+local silentButton = createButton("🔫 Redirigir Balas: OFF")
+local knifeButton = createButton("🔪 Lluvia de Cuchillos: OFF")
+
+local fovCircle = Instance.new("Frame")
+fovCircle.Name = "FOVCircle"
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.Position = UDim2.fromScale(0.5, 0.5)
+fovCircle.BackgroundTransparency = 1
+fovCircle.BorderSizePixel = 0
+fovCircle.Active = false
+fovCircle.Selectable = false
+fovCircle.ZIndex = 3
+fovCircle.Parent = gui
+
+local circleCorner = Instance.new("UICorner")
+circleCorner.CornerRadius = UDim.new(1, 0)
+circleCorner.Parent = fovCircle
+
+local circleStroke = Instance.new("UIStroke")
+circleStroke.Thickness = 2
+circleStroke.Color = Color3.fromRGB(255, 255, 255)
+circleStroke.Parent = fovCircle
 
 RunService.RenderStepped:Connect(function()
         if fovCircle then
                 fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
                 fovCircle.Position = UDim2.fromScale(0.5, 0.5)
+                fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
         end
 end)
---==================================================
--- DARKSHIELD  |  PARTE 2 DE 3
---==================================================
 
---==============================
--- ESP RAINBOW
---==============================
-
+-- ESP Rainbow
 local function removeESP(character)
         if not character then return end
         local old = character:FindFirstChild(ESP_NAME)
@@ -440,8 +422,7 @@ end
 
 local function addESP(character)
         if not ESP then return end
-        if not character then return end
-        if character == player.Character then return end
+        if not character or character == player.Character then return end
 
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if not humanoid then
@@ -462,14 +443,11 @@ local function addESP(character)
 
         highlight.FillColor = Color3.fromHSV(0, 1, 1)
         highlight.OutlineColor = Color3.fromHSV(0.5, 1, 1)
-
-        return highlight
 end
 
-local function updateRainbowColors()
+RunService.RenderStepped:Connect(function()
         if not ESP then return end
         local hue = (tick() * 0.2) % 1
-
         for _, plr in ipairs(Players:GetPlayers()) do
                 if plr ~= player and plr.Character then
                         local highlight = plr.Character:FindFirstChild(ESP_NAME)
@@ -479,7 +457,7 @@ local function updateRainbowColors()
                         end
                 end
         end
-end
+end)
 
 local function updateESP()
         for _,plr in ipairs(Players:GetPlayers()) do
@@ -493,28 +471,19 @@ local function updateESP()
         end
 end
 
-local function setupESPPlayer(plr)
-        if plr == player then return end
+Players.PlayerAdded:Connect(function(plr)
         plr.CharacterAdded:Connect(function(character)
                 character:WaitForChild("Humanoid", 5)
                 task.wait(0.2)
                 if ESP then addESP(character) end
         end)
-        if ESP and plr.Character then addESP(plr.Character) end
-end
-
-for _,plr in ipairs(Players:GetPlayers()) do setupESPPlayer(plr) end
-Players.PlayerAdded:Connect(setupESPPlayer)
-Players.PlayerRemoving:Connect(function(plr) removeESP(plr.Character) end)
-
-RunService.RenderStepped:Connect(function()
-        updateRainbowColors()
 end)
 
---==============================
--- INVISIBILIDAD
---==============================
+Players.PlayerRemoving:Connect(function(plr)
+        removeESP(plr.Character)
+end)
 
+-- Invisibilidad y Noclip
 local function setInvisible()
         if not Invisible then return end
         local character = player.Character
@@ -524,15 +493,12 @@ local function setInvisible()
                 if part:IsA("BasePart") then
                         part.Transparency = 1
                         part.CanCollide = false
-                end
-                if part:IsA("Accessory") or part:IsA("Hat") then
+                elseif part:IsA("Accessory") or part:IsA("Hat") then
                         if part:FindFirstChild("Handle") then part.Handle.Transparency = 1 end
-                end
-                if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
+                elseif part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
                         part.Transparency = 1
                 end
         end
-
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if humanoid then humanoid.BreakJointsOnDeath = false end
 end
@@ -545,11 +511,9 @@ local function setVisible()
                 if part:IsA("BasePart") then
                         part.Transparency = 0
                         part.CanCollide = true
-                end
-                if part:IsA("Accessory") or part:IsA("Hat") then
+                elseif part:IsA("Accessory") or part:IsA("Hat") then
                         if part:FindFirstChild("Handle") then part.Handle.Transparency = 0 end
-                end
-                if part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
+                elseif part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
                         part.Transparency = 0
                 end
         end
@@ -559,24 +523,19 @@ RunService.RenderStepped:Connect(function()
         if Invisible then setInvisible() end
 end)
 
---==============================
--- NOCLIP
---==============================
-
 RunService.Stepped:Connect(function()
         if not Noclip then return end
         local character = player.Character
         if not character then return end
-
         for _,part in ipairs(character:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
         end
 end)
+--==================================================
+-- DARKSHIELD  |  PARTE 3 DE 4
+--==================================================
 
---==============================
--- AIMBOT
---==============================
-
+-- Aimbot
 local function getClosestHead()
         camera = workspace.CurrentCamera
         if not camera then return nil end
@@ -618,10 +577,7 @@ RunService.RenderStepped:Connect(function()
         end
 end)
 
---==============================
--- X-RAY
---==============================
-
+-- X-Ray
 local xrayParts = {}
 
 local function enableXRay()
@@ -646,14 +602,8 @@ local function disableXRay()
         end
         table.clear(xrayParts)
 end
---==================================================
--- DARKSHIELD  |  PARTE 3 DE 3
---==================================================
 
---==============================
--- UTILIDADES DE COMBATE (WALLBANG & SILENT AIM)
---==============================
-
+-- Wallbang & Silent Aim Hooks
 local redirected = 0
 local hooked = false
 
@@ -670,7 +620,7 @@ local function characters()
         return list
 end
 
-local function closestHead()
+local function closestHeadSilent()
         local cam = workspace.CurrentCamera
         if not cam then return nil end
 
@@ -749,19 +699,12 @@ local function wallbangCast(origin, direction)
         return hit
 end
 
---==============================
--- HOOK
---==============================
-
 local guard = false
 local original
 
 local function install()
         if original then return end
-        if not hookmetamethod then
-                print("[DARKSHIELD] no hay hookmetamethod")
-                return
-        end
+        if not hookmetamethod then return end
 
         local ok, fn = pcall(hookmetamethod, game, "__namecall", function(self, ...)
                 local method = getnamecallmethod()
@@ -770,10 +713,9 @@ local function install()
                         return original(self, ...)
                 end
 
-                -- SILENT AIM
                 if SilentAim and self == workspace.CurrentCamera then
                         if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                                local head = closestHead()
+                                local head = closestHeadSilent()
                                 if head then
                                         local origin = workspace.CurrentCamera.CFrame.Position
                                         redirected = redirected + 1
@@ -782,7 +724,6 @@ local function install()
                         end
                 end
 
-                -- WALLBANG
                 if Wallbang and self == workspace then
                         local args = { ... }
 
@@ -812,10 +753,7 @@ end
 
 install()
 
---==============================
--- LLUVIA DE CUCHILLOS (MODO SEGURO Y ESTABLE)
---==============================
-
+-- Lluvia de cuchillos estable
 local function triggerKnifeStorm()
         if not KnifeStorm then return end
         local character = player.Character
@@ -837,7 +775,6 @@ local function triggerKnifeStorm()
                                 break
                         end
                 end
-                
                 pcall(function()
                         tool:Activate()
                 end)
@@ -854,11 +791,11 @@ task.spawn(function()
                 end
         end
 end)
+--==================================================
+-- DARKSHIELD  |  PARTE 4 DE 4
+--==================================================
 
---==============================
--- NPCs (CACHÉ)
---==============================
-
+-- NPCs (Caché)
 local npcCache = {}
 
 local function scanNPCs()
@@ -887,10 +824,7 @@ task.spawn(function()
         end
 end)
 
---==============================
--- BRING PLAYERS / NPCS
---==============================
-
+-- Bring Players / NPCs
 local function collectTargets()
         local targets = {}
         for _, plr in ipairs(Players:GetPlayers()) do
@@ -952,10 +886,7 @@ task.spawn(function()
         end
 end)
 
---==============================
--- CONEXIONES DE BOTONES GUI
---==============================
-
+-- Conexiones de Botones de la GUI
 espButton.Activated:Connect(function()
         ESP = not ESP
         espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
@@ -1035,10 +966,7 @@ anchorButton.Activated:Connect(function()
         end
 end)
 
---==============================
--- ABRIR / CERRAR
---==============================
-
+-- Abrir / Cerrar Menú
 local openButton = Instance.new("TextButton")
 openButton.Size = UDim2.fromOffset(48, 48)
 openButton.Position = UDim2.new(0, 15, 0.5, -24)
@@ -1071,4 +999,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente en estilo Negro y Blanco")
+print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado exitosamente en 4 partes")

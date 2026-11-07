@@ -1,11 +1,12 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 3 (SISTEMA DE APERTURA / CIERRE LATERAL)
+-- DARKSHIELD  |  PARTE 1 DE 3
 -- LocalScript | StarterPlayer > StarterPlayerScripts
 --==================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -105,6 +106,16 @@ creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
 creator.Parent = main
 
+-- Zona para arrastrar el menú (encima del encabezado)
+local dragBar = Instance.new("TextButton")
+dragBar.Size = UDim2.new(1, -60, 0, 62)
+dragBar.Position = UDim2.fromOffset(8, 4)
+dragBar.BackgroundTransparency = 1
+dragBar.Text = ""
+dragBar.AutoButtonColor = false
+dragBar.ZIndex = 8
+dragBar.Parent = main
+
 -- Botón 'X' al costado del menú en el medio exacto para cerrar
 local close = Instance.new("TextButton")
 close.Size = UDim2.fromOffset(34, 34)
@@ -127,7 +138,123 @@ closeStroke.Thickness = 1.5
 closeStroke.Color = Color3.fromRGB(150, 150, 150)
 closeStroke.Parent = close
 
--- Zona desplazable con espacio holgado al final
+--==============================
+-- ARRASTRAR LIBREMENTE
+--==============================
+
+local function makeDraggable(object, handle)
+        local dragging = false
+        local moved = false
+        local startMouse = nil
+        local startPos = nil
+
+        handle.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = true
+                        moved = false
+
+                        local abs = object.AbsolutePosition
+                        object.Position = UDim2.fromOffset(abs.X, abs.Y)
+
+                        startMouse = input.Position
+                        startPos = object.Position
+                end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+                if not dragging then return end
+                if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then
+                        return
+                end
+
+                local delta = input.Position - startMouse
+                if delta.Magnitude > 4 then
+                        moved = true
+                end
+
+                local viewport = workspace.CurrentCamera.ViewportSize
+                local maxX = math.max(0, viewport.X - object.AbsoluteSize.X)
+                local maxY = math.max(0, viewport.Y - object.AbsoluteSize.Y)
+
+                local newX = math.clamp(startPos.X.Offset + delta.X, 0, maxX)
+                local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, maxY)
+
+                object.Position = UDim2.fromOffset(newX, newY)
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = false
+                end
+        end)
+
+        return function()
+                if moved then
+                        moved = false
+                        return true
+                end
+                return false
+        end
+end
+
+makeDraggable(main, dragBar)
+
+--==============================
+-- TÍTULO DE ENTRADA
+--==============================
+
+local splash = Instance.new("Frame")
+splash.Size = UDim2.fromScale(1, 1)
+splash.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+splash.BackgroundTransparency = 0.45
+splash.BorderSizePixel = 0
+splash.Active = false
+splash.ZIndex = 50
+splash.Parent = gui
+
+local splashTitle = Instance.new("TextLabel")
+splashTitle.Size = UDim2.new(1, 0, 0, 60)
+splashTitle.Position = UDim2.new(0, 0, 0.5, -50)
+splashTitle.BackgroundTransparency = 1
+splashTitle.Text = "DARKSHIELD"
+splashTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+splashTitle.TextSize = 46
+splashTitle.Font = Enum.Font.GothamBold
+splashTitle.ZIndex = 51
+splashTitle.Parent = splash
+
+local splashStroke = Instance.new("UIStroke")
+splashStroke.Thickness = 1.5
+splashStroke.Color = Color3.fromRGB(120, 120, 120)
+splashStroke.Parent = splashTitle
+
+local splashSub = Instance.new("TextLabel")
+splashSub.Size = UDim2.new(1, 0, 0, 20)
+splashSub.Position = UDim2.new(0, 0, 0.5, 12)
+splashSub.BackgroundTransparency = 1
+splashSub.Text = "CREATED BY NSAKI_DZHUB"
+splashSub.TextColor3 = Color3.fromRGB(180, 180, 180)
+splashSub.TextSize = 13
+splashSub.Font = Enum.Font.GothamBold
+splashSub.ZIndex = 51
+splashSub.Parent = splash
+
+task.delay(2.2, function()
+        local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+        TweenService:Create(splash, info, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(splashTitle, info, { TextTransparency = 1 }):Play()
+        TweenService:Create(splashSub, info, { TextTransparency = 1 }):Play()
+
+        task.delay(0.8, function()
+                splash:Destroy()
+        end)
+end)
+
+--==============================
+-- ZONA DESPLAZABLE
+--==============================
+
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, 0, 1, -70)
 scroll.Position = UDim2.fromOffset(0, 70)
@@ -909,10 +1036,13 @@ anchorButton.Activated:Connect(function()
         end
 end)
 
--- Botón flotante para reabrir el menú ubicado exactamente en la misma zona media derecha
+--==============================
+-- BOTÓN LATERAL ARRASTRABLE
+--==============================
+
 local openButton = Instance.new("TextButton")
 openButton.Size = UDim2.fromOffset(48, 48)
-openButton.Position = UDim2.new(0.5, 175, 0.5, -24)
+openButton.Position = UDim2.new(1, -58, 0.5, -24)
 openButton.Text = "🛡️"
 openButton.TextSize = 22
 openButton.Font = Enum.Font.GothamBold
@@ -932,14 +1062,18 @@ openStroke.Thickness = 1.5
 openStroke.Color = Color3.fromRGB(150, 150, 150)
 openStroke.Parent = openButton
 
+-- El botón también se arrastra a donde quieras
+local openWasDragged = makeDraggable(openButton, openButton)
+
 close.Activated:Connect(function()
         main.Visible = false
         openButton.Visible = true
 end)
 
 openButton.Activated:Connect(function()
+        if openWasDragged() then return end
         main.Visible = true
         openButton.Visible = false
 end)
 
-print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente con botón de apertura/cierre lateral")
+print("☠️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente con botón de apertura/cierre lateral")

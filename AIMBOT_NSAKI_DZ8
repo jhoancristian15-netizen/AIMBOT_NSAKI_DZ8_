@@ -1,5 +1,5 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 3
+-- DARKSHIELD  |  PARTE 1 DE 3 (ESTILO B&W / BOTÓN LATERAL)
 -- LocalScript | StarterPlayer > StarterPlayerScripts
 --==================================================
 
@@ -45,7 +45,7 @@ do
 end
 
 --==============================
--- GUI (ESTILO NEGRO Y BLANCO / 100% VISIBLE)
+-- GUI (ESTILO NEGRO Y BLANCO)
 --==============================
 
 local gui = Instance.new("ScreenGui")
@@ -58,7 +58,7 @@ local main = Instance.new("Frame")
 main.Name = "MainFrame"
 main.Size = UDim2.fromOffset(340, 600)
 main.Position = UDim2.new(0.5, -170, 0.5, -300)
-main.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Negro sólido y visible
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 main.BackgroundTransparency = 0
 main.Visible = true
 main.BorderSizePixel = 0
@@ -82,7 +82,7 @@ topBar.ZIndex = 6
 topBar.Parent = main
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -60, 0, 35)
+title.Size = UDim2.new(1, -20, 0, 35)
 title.Position = UDim2.fromOffset(16, 12)
 title.BackgroundTransparency = 1
 title.Text = "DARKSHIELD"
@@ -94,7 +94,7 @@ title.ZIndex = 6
 title.Parent = main
 
 local creator = Instance.new("TextLabel")
-creator.Size = UDim2.new(1, -60, 0, 16)
+creator.Size = UDim2.new(1, -20, 0, 16)
 creator.Position = UDim2.fromOffset(16, 44)
 creator.BackgroundTransparency = 1
 creator.Text = "CREATED BY NSAKI_DZHUB"
@@ -105,28 +105,29 @@ creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
 creator.Parent = main
 
--- Botón de cerrar claramente visible en la esquina superior derecha
+-- Botón 'X' ubicado al costado del menú en el medio exacto (Borde derecho, centro vertical)
 local close = Instance.new("TextButton")
-close.Size = UDim2.fromOffset(32, 32)
-close.Position = UDim2.new(1, -44, 0, 14)
-close.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+close.Size = UDim2.fromOffset(34, 34)
+close.Position = UDim2.new(1, 10, 0.5, -17)
+close.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 close.BackgroundTransparency = 0
 close.Text = "✕"
 close.TextColor3 = Color3.fromRGB(255, 255, 255)
 close.TextSize = 16
 close.Font = Enum.Font.GothamBold
-close.ZIndex = 7
+close.ZIndex = 12
 close.Parent = main
 
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.CornerRadius = UDim.new(1, 0)
 closeCorner.Parent = close
 
 local closeStroke = Instance.new("UIStroke")
-closeStroke.Thickness = 1
-closeStroke.Color = Color3.fromRGB(120, 120, 120)
+closeStroke.Thickness = 1.5
+closeStroke.Color = Color3.fromRGB(150, 150, 150)
 closeStroke.Parent = close
 
+-- Zona desplazable con margen inferior extra para visualizar hasta el último elemento
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, 0, 1, -70)
 scroll.Position = UDim2.fromOffset(0, 70)
@@ -144,16 +145,16 @@ local scrollPad = Instance.new("UIPadding")
 scrollPad.PaddingLeft = UDim.new(0, 16)
 scrollPad.PaddingRight = UDim.new(0, 16)
 scrollPad.PaddingTop = UDim.new(0, 10)
-scrollPad.PaddingBottom = UDim.new(0, 20)
+scrollPad.PaddingBottom = UDim.new(0, 45) -- Espacio holgado extra para llegar al final sin cortes
 scrollPad.Parent = scroll
 
 local scrollList = Instance.new("UIListLayout")
-scrollList.Padding = UDim.new(0, 8)
+scrollList.Padding = UDim.new(0, 10)
 scrollList.SortOrder = Enum.SortOrder.LayoutOrder
 scrollList.Parent = scroll
 
 local function updateCanvas()
-        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 25)
+        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 50)
 end
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 updateCanvas()
@@ -908,10 +909,10 @@ anchorButton.Activated:Connect(function()
         end
 end)
 
--- Abrir / Cerrar Menú
+-- Abrir / Cerrar Menú (Botón lateral 'X' y botón flotante en la misma zona media)
 local openButton = Instance.new("TextButton")
 openButton.Size = UDim2.fromOffset(48, 48)
-openButton.Position = UDim2.new(0, 15, 0.5, -24)
+openButton.Position = UDim2.new(0.5, -24, 0.5, -24)
 openButton.Text = "🛡️"
 openButton.TextSize = 22
 openButton.Font = Enum.Font.GothamBold
@@ -928,7 +929,7 @@ openCorner.Parent = openButton
 
 local openStroke = Instance.new("UIStroke")
 openStroke.Thickness = 1.5
-openStroke.Color = Color3.fromRGB(80, 80, 80)
+openStroke.Color = Color3.fromRGB(100, 100, 100)
 openStroke.Parent = openButton
 
 close.Activated:Connect(function()
@@ -941,4 +942,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente")
+print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado exitosamente")

@@ -106,7 +106,6 @@ creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
 creator.Parent = main
 
--- Zona para arrastrar el menú (encima del encabezado)
 local dragBar = Instance.new("TextButton")
 dragBar.Size = UDim2.new(1, -60, 0, 62)
 dragBar.Position = UDim2.fromOffset(8, 4)
@@ -116,7 +115,6 @@ dragBar.AutoButtonColor = false
 dragBar.ZIndex = 8
 dragBar.Parent = main
 
--- Botón 'X' al costado del menú en el medio exacto para cerrar
 local close = Instance.new("TextButton")
 close.Size = UDim2.fromOffset(34, 34)
 close.Position = UDim2.new(1, 10, 0.5, -17)
@@ -272,7 +270,7 @@ local scrollPad = Instance.new("UIPadding")
 scrollPad.PaddingLeft = UDim.new(0, 16)
 scrollPad.PaddingRight = UDim.new(0, 16)
 scrollPad.PaddingTop = UDim.new(0, 10)
-scrollPad.PaddingBottom = UDim.new(0, 50)
+scrollPad.PaddingBottom = UDim.new(0, 70)
 scrollPad.Parent = scroll
 
 local scrollList = Instance.new("UIListLayout")
@@ -281,13 +279,23 @@ scrollList.SortOrder = Enum.SortOrder.LayoutOrder
 scrollList.Parent = scroll
 
 local function updateCanvas()
-        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 60)
+        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 90)
 end
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 updateCanvas()
 
+-- Refuerzo por si el layout no avisa del cambio
+task.spawn(function()
+        while true do
+                updateCanvas()
+                task.wait(0.5)
+        end
+end)
+
 local scrollTouching = false
 local savedScroll = 0
+local lastInput = 0
+
 local function maxScroll()
         return math.max(0, scroll.CanvasSize.Y - scroll.AbsoluteSize.Y)
 end
@@ -295,23 +303,39 @@ end
 scroll.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 scrollTouching = true
+                lastInput = os.clock()
         end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                task.delay(0.15, function() scrollTouching = false end)
+                scrollTouching = false
+                lastInput = os.clock()
         end
 end)
 
 RunService.RenderStepped:Connect(function()
-        if scrollTouching then
-                savedScroll = scroll.CanvasPosition.Y
+        local limit = maxScroll()
+        local pos = scroll.CanvasPosition.Y
+
+        if pos > limit + 1 then
+                pos = limit
+                scroll.CanvasPosition = Vector2.new(0, pos)
+        end
+
+        local idle = (os.clock() - lastInput) > 0.9
+
+        -- Mientras arrastras o hay inercia, se respeta la posición
+        if scrollTouching or not idle then
+                savedScroll = pos
+                return
+        end
+
+        -- Solo se corrige si hubo un salto brusco al inicio
+        if math.abs(pos - savedScroll) > 60 then
+                scroll.CanvasPosition = Vector2.new(0, math.clamp(savedScroll, 0, limit))
         else
-                savedScroll = math.clamp(savedScroll, 0, maxScroll())
-                if math.abs(scroll.CanvasPosition.Y - savedScroll) > 0.5 then
-                        scroll.CanvasPosition = Vector2.new(0, savedScroll)
-                end
+                savedScroll = pos
         end
 end)
 
@@ -389,6 +413,7 @@ local function createSlider(labelText, min, max, initial, onChange)
         bar.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         dragging = true
+                        lastInput = os.clock()
                         apply(input.Position.X)
                 end
         end)
@@ -396,6 +421,7 @@ local function createSlider(labelText, min, max, initial, onChange)
         UserInputService.InputChanged:Connect(function(input)
                 if not dragging then return end
                 if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        lastInput = os.clock()
                         apply(input.Position.X)
                 end
         end)
@@ -403,6 +429,7 @@ local function createSlider(labelText, min, max, initial, onChange)
         UserInputService.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         dragging = false
+                        lastInput = os.clock()
                 end
         end)
 
@@ -827,30 +854,67 @@ end
 
 install()
 
--- Lluvia de cuchillos estable
-local function triggerKnifeStorm()
-        if not KnifeStorm then return end
+--==============================
+-- LLUVIA DE CUCHILLOS (SIN KICK)
+--==============================
+
+local STORM_INTERVAL = 0.22
+
+local function findThrowRemote(tool)
+        local fallback = nil
+
+        for _, d in ipairs(tool:GetDescendants()) do
+                if d:IsA("RemoteEvent") then
+                        local n = string.lower(d.Name)
+                        if n:find("throw") or n:find("knife") or n:find("attack")
+                                or n:find("swing") or n:find("fire") or n:find("shoot") then
+                                return d
+                        end
+                        if not fallback then
+                                fallback = d
+                        end
+                end
+        end
+
+        return fallback
+end
+
+local function knifeStormStep()
         local character = player.Character
         if not character then return end
 
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then return end
+
         local tool = character:FindFirstChildOfClass("Tool")
+
+        -- Si no lo tiene en la mano, lo equipa una vez y sale
         if not tool then
-                tool = player.Backpack:FindFirstChildOfClass("Tool")
+                local backpackTool = player.Backpack:FindFirstChildOfClass("Tool")
+                if backpackTool then
+                        pcall(function()
+                                humanoid:EquipTool(backpackTool)
+                        end)
+                end
+                return
         end
 
-        if tool then
-                for _, descendant in ipairs(tool:GetDescendants()) do
-                        if descendant:IsA("RemoteEvent") then
-                                for i = 1, 2 do
-                                        pcall(function()
-                                                descendant:FireServer(camera.CFrame)
-                                        end)
-                                end
-                                break
-                        end
-                end
+        -- Activación normal del juego (es lo que hace el botón de lanzar)
+        pcall(function()
+                tool:Activate()
+        end)
+
+        task.wait(0.06)
+
+        pcall(function()
+                tool:Activate()
+        end)
+
+        -- Un solo remoto extra, no dos ni tres, para no saturar
+        local remote = findThrowRemote(tool)
+        if remote then
                 pcall(function()
-                        tool:Activate()
+                        remote:FireServer()
                 end)
         end
 end
@@ -858,8 +922,8 @@ end
 task.spawn(function()
         while true do
                 if KnifeStorm then
-                        triggerKnifeStorm()
-                        task.wait(0.18)
+                        knifeStormStep()
+                        task.wait(STORM_INTERVAL)
                 else
                         task.wait(0.3)
                 end
@@ -1062,7 +1126,6 @@ openStroke.Thickness = 1.5
 openStroke.Color = Color3.fromRGB(150, 150, 150)
 openStroke.Parent = openButton
 
--- El botón también se arrastra a donde quieras
 local openWasDragged = makeDraggable(openButton, openButton)
 
 close.Activated:Connect(function()
@@ -1076,4 +1139,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("☠️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente con botón de apertura/cierre lateral")
+print(" DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente con botón de apertura/cierre lateral")

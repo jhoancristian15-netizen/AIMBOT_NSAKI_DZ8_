@@ -1,5 +1,5 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 4
+-- DARKSHIELD  |  PARTE 1 DE 3
 -- LocalScript | StarterPlayer > StarterPlayerScripts
 --==================================================
 
@@ -33,60 +33,46 @@ local FOVRadius = 150
 local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
-
 local MAX_WALL = 6
-
 local ESP_NAME = "DARKSHIELD_ESP"
 
--- Compatibilidad de enum (Include/Exclude)
 local INCLUDE, EXCLUDE
 do
         local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
         INCLUDE = ok1 and v1 or Enum.RaycastFilterType.Whitelist
-
         local ok2, v2 = pcall(function() return Enum.RaycastFilterType.Exclude end)
         EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
 end
 
 --==============================
--- GUI (ESTILO DECORATIVO B&W)
+-- GUI (ESTILO NEGRO Y BLANCO / 100% VISIBLE)
 --==============================
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "DARKSHIELD"
 gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(340, 620)
-main.Position = UDim2.new(0.5, -170, 0.5, -310)
-main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-main.BackgroundTransparency = 0.05
+main.Name = "MainFrame"
+main.Size = UDim2.fromOffset(340, 600)
+main.Position = UDim2.new(0.5, -170, 0.5, -300)
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Negro sólido y visible
+main.BackgroundTransparency = 0
+main.Visible = true
 main.BorderSizePixel = 0
-main.ClipsDescendants = true
 main.ZIndex = 5
 main.Parent = gui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 14)
+mainCorner.CornerRadius = UDim.new(0, 12)
 mainCorner.Parent = main
 
 local mainStroke = Instance.new("UIStroke")
-mainStroke.Thickness = 1.5
-mainStroke.Color = Color3.fromRGB(90, 90, 90)
+mainStroke.Thickness = 2
+mainStroke.Color = Color3.fromRGB(70, 70, 70)
 mainStroke.Parent = main
-
-local mainGradient = Instance.new("UIGradient")
-mainGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 150))
-})
-mainGradient.Rotation = 45
-mainGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.85),
-        NumberSequenceKeypoint.new(1, 0.95)
-})
-mainGradient.Parent = main
 
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 4)
@@ -95,15 +81,39 @@ topBar.BorderSizePixel = 0
 topBar.ZIndex = 6
 topBar.Parent = main
 
--- Botón de cerrar reubicado arriba a la izquierda
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -60, 0, 35)
+title.Position = UDim2.fromOffset(16, 12)
+title.BackgroundTransparency = 1
+title.Text = "DARKSHIELD"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 22
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 6
+title.Parent = main
+
+local creator = Instance.new("TextLabel")
+creator.Size = UDim2.new(1, -60, 0, 16)
+creator.Position = UDim2.fromOffset(16, 44)
+creator.BackgroundTransparency = 1
+creator.Text = "CREATED BY NSAKI_DZHUB"
+creator.TextColor3 = Color3.fromRGB(170, 170, 170)
+creator.TextSize = 10
+creator.Font = Enum.Font.GothamBold
+creator.TextXAlignment = Enum.TextXAlignment.Left
+creator.ZIndex = 6
+creator.Parent = main
+
+-- Botón de cerrar claramente visible en la esquina superior derecha
 local close = Instance.new("TextButton")
-close.Size = UDim2.fromOffset(28, 28)
-close.Position = UDim2.fromOffset(14, 14)
-close.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-close.BackgroundTransparency = 0.2
+close.Size = UDim2.fromOffset(32, 32)
+close.Position = UDim2.new(1, -44, 0, 14)
+close.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+close.BackgroundTransparency = 0
 close.Text = "✕"
 close.TextColor3 = Color3.fromRGB(255, 255, 255)
-close.TextSize = 14
+close.TextSize = 16
 close.Font = Enum.Font.GothamBold
 close.ZIndex = 7
 close.Parent = main
@@ -117,48 +127,15 @@ closeStroke.Thickness = 1
 closeStroke.Color = Color3.fromRGB(120, 120, 120)
 closeStroke.Parent = close
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -60, 0, 30)
-title.Position = UDim2.fromOffset(52, 12)
-title.BackgroundTransparency = 1
-title.Text = "DARKSHIELD"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 22
-title.Font = Enum.Font.GothamBold
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.ZIndex = 6
-title.Parent = main
-
-local creator = Instance.new("TextLabel")
-creator.Size = UDim2.new(1, -60, 0, 16)
-creator.Position = UDim2.fromOffset(52, 40)
-creator.BackgroundTransparency = 1
-creator.Text = "CREATED BY NSAKI_DZHUB"
-creator.TextColor3 = Color3.fromRGB(160, 160, 160)
-creator.TextSize = 10
-creator.Font = Enum.Font.GothamBold
-creator.TextXAlignment = Enum.TextXAlignment.Left
-creator.ZIndex = 6
-creator.Parent = main
-
-local separator = Instance.new("Frame")
-separator.Size = UDim2.new(1, -32, 0, 1)
-separator.Position = UDim2.new(0, 16, 0, 68)
-separator.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-separator.BorderSizePixel = 0
-separator.ZIndex = 6
-separator.Parent = main
-
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 1, -78)
-scroll.Position = UDim2.fromOffset(0, 78)
+scroll.Size = UDim2.new(1, 0, 1, -70)
+scroll.Position = UDim2.fromOffset(0, 70)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-scroll.ScrollBarThickness = 3
-scroll.ScrollBarImageColor3 = Color3.fromRGB(220, 220, 220)
-scroll.ScrollBarImageTransparency = 0.3
+scroll.ScrollBarThickness = 4
+scroll.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
 scroll.ClipsDescendants = true
 scroll.ZIndex = 6
 scroll.Parent = main
@@ -166,7 +143,7 @@ scroll.Parent = main
 local scrollPad = Instance.new("UIPadding")
 scrollPad.PaddingLeft = UDim.new(0, 16)
 scrollPad.PaddingRight = UDim.new(0, 16)
-scrollPad.PaddingTop = UDim.new(0, 8)
+scrollPad.PaddingTop = UDim.new(0, 10)
 scrollPad.PaddingBottom = UDim.new(0, 20)
 scrollPad.Parent = scroll
 
@@ -178,13 +155,11 @@ scrollList.Parent = scroll
 local function updateCanvas()
         scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 25)
 end
-
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 updateCanvas()
 
 local scrollTouching = false
 local savedScroll = 0
-
 local function maxScroll()
         return math.max(0, scroll.CanvasSize.Y - scroll.AbsoluteSize.Y)
 end
@@ -197,9 +172,7 @@ end)
 
 UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                task.delay(0.15, function()
-                        scrollTouching = false
-                end)
+                task.delay(0.15, function() scrollTouching = false end)
         end
 end)
 
@@ -214,6 +187,7 @@ RunService.RenderStepped:Connect(function()
         end
 end)
 
+-- EL FOV VA PRIMERO
 local function createSlider(labelText, min, max, initial, onChange)
         local holder = Instance.new("Frame")
         holder.Size = UDim2.new(1, 0, 0, 50)
@@ -235,7 +209,7 @@ local function createSlider(labelText, min, max, initial, onChange)
         local bar = Instance.new("Frame")
         bar.Size = UDim2.new(1, 0, 0, 6)
         bar.Position = UDim2.new(0, 0, 0, 32)
-        bar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         bar.BorderSizePixel = 0
         bar.ZIndex = 6
         bar.Parent = holder
@@ -267,9 +241,7 @@ local function createSlider(labelText, min, max, initial, onChange)
         knobCorner.CornerRadius = UDim.new(1, 0)
         knobCorner.Parent = knob
 
-        local api = {}
         local dragging = false
-
         local function paint(percent)
                 knob.Position = UDim2.new(percent, 0, 0.5, 0)
                 fill.Size = UDim2.new(percent, 0, 1, 0)
@@ -279,10 +251,8 @@ local function createSlider(labelText, min, max, initial, onChange)
                 local left = bar.AbsolutePosition.X
                 local width = bar.AbsoluteSize.X
                 if width <= 0 then return end
-
                 local percent = math.clamp((x - left) / width, 0, 1)
                 paint(percent)
-
                 local value = math.floor(min + percent * (max - min) + 0.5)
                 label.Text = labelText..tostring(value)
                 onChange(value)
@@ -308,30 +278,22 @@ local function createSlider(labelText, min, max, initial, onChange)
                 end
         end)
 
-        api.set = function(value)
-                local percent = math.clamp((value - min) / (max - min), 0, 1)
-                paint(percent)
-                label.Text = labelText..tostring(math.floor(value + 0.5))
-        end
-
         paint(math.clamp((initial - min) / (max - min), 0, 1))
         onChange(initial)
-
-        return api
 end
 
-local aimFovSlider = createSlider("🎯 FOV Aimbot: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
+createSlider("🎯 FOV Aimbot: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
         FOVRadius = value
 end)
 --==================================================
--- DARKSHIELD  |  PARTE 2 DE 4
+-- DARKSHIELD  |  PARTE 2 DE 3
 --==================================================
 
 local function createButton(text)
         local button = Instance.new("TextButton")
         button.Size = UDim2.new(1, 0, 0, 42)
-        button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-        button.BackgroundTransparency = 0.15
+        button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+        button.BackgroundTransparency = 0
         button.BorderSizePixel = 0
         button.Text = text
         button.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -346,28 +308,16 @@ local function createButton(text)
 
         local stroke = Instance.new("UIStroke")
         stroke.Thickness = 1
-        stroke.Color = Color3.fromRGB(45, 45, 45)
+        stroke.Color = Color3.fromRGB(50, 50, 50)
         stroke.Parent = button
 
-        local btnGradient = Instance.new("UIGradient")
-        btnGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180))
-        })
-        btnGradient.Rotation = 90
-        btnGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.9),
-                NumberSequenceKeypoint.new(1, 0.98)
-        })
-        btnGradient.Parent = button
-
         button.MouseEnter:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-                stroke.Color = Color3.fromRGB(180, 180, 180)
+                button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                stroke.Color = Color3.fromRGB(200, 200, 200)
         end)
         button.MouseLeave:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-                stroke.Color = Color3.fromRGB(45, 45, 45)
+                button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+                stroke.Color = Color3.fromRGB(50, 50, 50)
         end)
 
         return button
@@ -478,10 +428,7 @@ Players.PlayerAdded:Connect(function(plr)
                 if ESP then addESP(character) end
         end)
 end)
-
-Players.PlayerRemoving:Connect(function(plr)
-        removeESP(plr.Character)
-end)
+Players.PlayerRemoving:Connect(function(plr) removeESP(plr.Character) end)
 
 -- Invisibilidad y Noclip
 local function setInvisible()
@@ -532,7 +479,7 @@ RunService.Stepped:Connect(function()
         end
 end)
 --==================================================
--- DARKSHIELD  |  PARTE 3 DE 4
+-- DARKSHIELD  |  PARTE 3 DE 3
 --==================================================
 
 -- Aimbot
@@ -579,7 +526,6 @@ end)
 
 -- X-Ray
 local xrayParts = {}
-
 local function enableXRay()
         for _,object in ipairs(workspace:GetDescendants()) do
                 if object:IsA("BasePart") then
@@ -791,13 +737,9 @@ task.spawn(function()
                 end
         end
 end)
---==================================================
--- DARKSHIELD  |  PARTE 4 DE 4
---==================================================
 
--- NPCs (Caché)
+-- NPCs Caché
 local npcCache = {}
-
 local function scanNPCs()
         local found = {}
         local function scan(container, depth)
@@ -824,7 +766,7 @@ task.spawn(function()
         end
 end)
 
--- Bring Players / NPCs
+-- Bring logic
 local function collectTargets()
         local targets = {}
         for _, plr in ipairs(Players:GetPlayers()) do
@@ -886,7 +828,7 @@ task.spawn(function()
         end
 end)
 
--- Conexiones de Botones de la GUI
+-- Conexiones de Botones
 espButton.Activated:Connect(function()
         ESP = not ESP
         espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
@@ -974,7 +916,7 @@ openButton.Text = "🛡️"
 openButton.TextSize = 22
 openButton.Font = Enum.Font.GothamBold
 openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+openButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 openButton.BackgroundTransparency = 0.2
 openButton.Visible = false
 openButton.ZIndex = 10
@@ -999,4 +941,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado exitosamente en 4 partes")
+print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente")

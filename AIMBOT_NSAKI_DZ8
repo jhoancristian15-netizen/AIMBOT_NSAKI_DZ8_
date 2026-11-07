@@ -1,6 +1,6 @@
 --==================================================
 -- NSAKI_DZ8  |  DEMON EDITION (PARTE 1 DE 3)
--- LocalScript
+-- LocalScript | Estilo Rediseñado (Más compacto y estilizado)
 -- StarterPlayer > StarterPlayerScripts
 --==================================================
 
@@ -25,7 +25,7 @@ local BringNPCs = false
 local AnchorBring = false
 local Wallbang = false
 local SilentAim = false
-local KnifeStorm = false    -- NUEVO: Lluvia de cuchillos
+local KnifeStorm = false
 
 local FOV_MIN = 50
 local FOV_MAX = 300
@@ -39,7 +39,7 @@ local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 
-local MAX_WALL = 6          -- Grosor máximo atravesable
+local MAX_WALL = 6
 
 local ESP_NAME = "NSAKI_DZ8_ESP"
 
@@ -54,7 +54,7 @@ do
 end
 
 --==============================
--- GUI
+-- GUI (NUEVA FORMA Y ESTILO)
 --==============================
 
 local gui = Instance.new("ScreenGui")
@@ -63,120 +63,103 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(350,520)
-main.Position = UDim2.new(0.5,-175,0.5,-260)
-main.BackgroundColor3 = Color3.fromRGB(0,0,0)
-main.BackgroundTransparency = 0.15
+main.Size = UDim2.fromOffset(280, 560) -- Forma más vertical y estilizada
+main.Position = UDim2.new(0.5, -140, 0.5, -280)
+main.BackgroundColor3 = Color3.fromRGB(15, 12, 12)
+main.BackgroundTransparency = 0.1
 main.BorderSizePixel = 0
-main.ClipsDescendants = false
+main.ClipsDescendants = true
 main.ZIndex = 5
 main.Parent = gui
 
-local background = Instance.new("ImageLabel")
-background.Size = UDim2.new(1,0,1,0)
-background.Position = UDim2.new(0,0,0,0)
-background.BackgroundTransparency = 1
-background.Image = "rbxassetid://6221759629271129710"
-background.ScaleType = Enum.ScaleType.Fit
-background.ZIndex = 5
-background.Parent = main
-
-local border = Instance.new("Frame")
-border.Size = UDim2.new(1,4,1,4)
-border.Position = UDim2.new(0,-2,0,-2)
-border.BackgroundTransparency = 1
-border.BorderSizePixel = 2
-border.BorderColor3 = Color3.fromRGB(255,0,0)
-border.ZIndex = 5
-border.Parent = main
-
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0,12)
+mainCorner.CornerRadius = UDim.new(0, 14)
 mainCorner.Parent = main
 
+-- Barra superior de acento rojo
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 4)
+topBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+topBar.BorderSizePixel = 0
+topBar.ZIndex = 6
+topBar.Parent = main
+
 --==============================
--- TÍTULO
+-- TÍTULO Y ENCABEZADO
 --==============================
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,-50,0,40)
-title.Position = UDim2.fromOffset(15,6)
+title.Size = UDim2.new(1, -45, 0, 45)
+title.Position = UDim2.fromOffset(15, 8)
 title.BackgroundTransparency = 1
 title.Text = "NSAKI DZ8"
-title.TextColor3 = Color3.new(1,0,0)
-title.TextSize = 26
+title.TextColor3 = Color3.fromRGB(255, 40, 40)
+title.TextSize = 22
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.ZIndex = 6
 title.Parent = main
 
-local titleShadow = Instance.new("TextLabel")
-titleShadow.Size = UDim2.new(1,-50,0,40)
-titleShadow.Position = UDim2.fromOffset(17,8)
-titleShadow.BackgroundTransparency = 1
-titleShadow.Text = "NSAKI DZ8"
-titleShadow.TextColor3 = Color3.new(0.3,0,0)
-titleShadow.TextSize = 26
-titleShadow.Font = Enum.Font.GothamBold
-titleShadow.TextXAlignment = Enum.TextXAlignment.Left
-titleShadow.ZIndex = 6
-titleShadow.Parent = main
-
 local creator = Instance.new("TextLabel")
-creator.Size = UDim2.new(1,-30,0,20)
-creator.Position = UDim2.fromOffset(15,44)
+creator.Size = UDim2.new(1, -45, 0, 16)
+creator.Position = UDim2.fromOffset(15, 42)
 creator.BackgroundTransparency = 1
-creator.Text = "⚔️ Demon Edition ⚔️"
-creator.TextColor3 = Color3.fromRGB(200,50,50)
-creator.TextSize = 14
-creator.Font = Enum.Font.Gotham
+creator.Text = "DEMON EDITION"
+creator.TextColor3 = Color3.fromRGB(160, 50, 50)
+creator.TextSize = 10
+creator.Font = Enum.Font.GothamBold
 creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
 creator.Parent = main
 
 local close = Instance.new("TextButton")
-close.Size = UDim2.fromOffset(35,35)
-close.Position = UDim2.new(1,-42,0,8)
-close.BackgroundTransparency = 1
+close.Size = UDim2.fromOffset(30, 30)
+close.Position = UDim2.new(1, -38, 0, 12)
+close.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+close.BackgroundTransparency = 0.5
 close.Text = "✕"
-close.TextColor3 = Color3.new(1,0.2,0.2)
-close.TextSize = 22
+close.TextColor3 = Color3.fromRGB(255, 100, 100)
+close.TextSize = 14
 close.Font = Enum.Font.GothamBold
 close.ZIndex = 7
 close.Parent = main
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = close
 
 --==============================
 -- ZONA DESPLAZABLE
 --==============================
 
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1,0,1,-72)
-scroll.Position = UDim2.fromOffset(0,72)
+scroll.Size = UDim2.new(1, 0, 1, -70)
+scroll.Position = UDim2.fromOffset(0, 70)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
-scroll.CanvasSize = UDim2.new(0,0,0,0)
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-scroll.ScrollBarThickness = 4
-scroll.ScrollBarImageColor3 = Color3.fromRGB(255,0,0)
-scroll.ScrollBarImageTransparency = 0.25
+scroll.ScrollBarThickness = 3
+scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
+scroll.ScrollBarImageTransparency = 0.3
 scroll.ClipsDescendants = true
 scroll.ZIndex = 6
 scroll.Parent = main
 
 local scrollPad = Instance.new("UIPadding")
-scrollPad.PaddingLeft = UDim.new(0,15)
-scrollPad.PaddingRight = UDim.new(0,15)
-scrollPad.PaddingTop = UDim.new(0,6)
-scrollPad.PaddingBottom = UDim.new(0,18)
+scrollPad.PaddingLeft = UDim.new(0, 12)
+scrollPad.PaddingRight = UDim.new(0, 12)
+scrollPad.PaddingTop = UDim.new(0, 4)
+scrollPad.PaddingBottom = UDim.new(0, 16)
 scrollPad.Parent = scroll
 
 local scrollList = Instance.new("UIListLayout")
-scrollList.Padding = UDim.new(0,6)
+scrollList.Padding = UDim.new(0, 6)
 scrollList.SortOrder = Enum.SortOrder.LayoutOrder
 scrollList.Parent = scroll
 
 local function updateCanvas()
-        scroll.CanvasSize = UDim2.new(0,0,0, scrollList.AbsoluteContentSize.Y + 26)
+        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 20)
 end
 
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
@@ -215,31 +198,31 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --==============================
--- BOTONES
+-- BOTONES (NUEVO ESTILO ESTILIZADO)
 --==============================
 
 local function createButton(text)
         local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1,0,0,40)
-        button.BackgroundColor3 = Color3.fromRGB(30,0,0)
-        button.BackgroundTransparency = 0.3
+        button.Size = UDim2.new(1, 0, 0, 38)
+        button.BackgroundColor3 = Color3.fromRGB(28, 12, 12)
+        button.BackgroundTransparency = 0.2
         button.BorderSizePixel = 0
         button.Text = text
-        button.TextColor3 = Color3.new(1,0.8,0.8)
-        button.TextSize = 14
-        button.Font = Enum.Font.GothamSemibold
+        button.TextColor3 = Color3.fromRGB(240, 200, 200)
+        button.TextSize = 13
+        button.Font = Enum.Font.GothamMedium
         button.ZIndex = 6
         button.Parent = scroll
 
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0,8)
+        corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = button
 
         button.MouseEnter:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(60,0,0)
+                button.BackgroundColor3 = Color3.fromRGB(55, 15, 15)
         end)
         button.MouseLeave:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(30,0,0)
+                button.BackgroundColor3 = Color3.fromRGB(28, 12, 12)
         end)
 
         return button
@@ -255,7 +238,7 @@ local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
 local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
 local silentButton = createButton("🔫 Redirigir Balas: OFF")
-local knifeButton = createButton("🔪 Lluvia de Cuchillos: OFF") -- NUEVO BOTÓN
+local knifeButton = createButton("🔪 Lluvia de Cuchillos: OFF")
 
 --==============================
 -- CÍRCULO FOV
@@ -263,8 +246,8 @@ local knifeButton = createButton("🔪 Lluvia de Cuchillos: OFF") -- NUEVO BOTÓ
 
 local fovCircle = Instance.new("Frame")
 fovCircle.Name = "FOVCircle"
-fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
-fovCircle.Position = UDim2.fromScale(0.5,0.5)
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.Position = UDim2.fromScale(0.5, 0.5)
 fovCircle.BackgroundTransparency = 1
 fovCircle.BorderSizePixel = 0
 fovCircle.Active = false
@@ -273,75 +256,75 @@ fovCircle.ZIndex = 3
 fovCircle.Parent = gui
 
 local circleCorner = Instance.new("UICorner")
-circleCorner.CornerRadius = UDim.new(1,0)
+circleCorner.CornerRadius = UDim.new(1, 0)
 circleCorner.Parent = fovCircle
 
 local circleStroke = Instance.new("UIStroke")
 circleStroke.Thickness = 2
-circleStroke.Color = Color3.new(1,0,0)
+circleStroke.Color = Color3.fromRGB(255, 0, 0)
 circleStroke.Parent = fovCircle
 
 local function updateFOV()
-        fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
-        fovCircle.Position = UDim2.fromScale(0.5,0.5)
+        fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+        fovCircle.Position = UDim2.fromScale(0.5, 0.5)
         fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
 end
 
 --==============================
--- SLIDERS
+-- SLIDERS (NUEVO DISEÑO COMPACTO)
 --==============================
 
 local function createSlider(labelText, min, max, initial, onChange)
         local holder = Instance.new("Frame")
-        holder.Size = UDim2.new(1,0,0,48)
+        holder.Size = UDim2.new(1, 0, 0, 46)
         holder.BackgroundTransparency = 1
         holder.ZIndex = 6
         holder.Parent = scroll
 
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1,0,0,20)
+        label.Size = UDim2.new(1, 0, 0, 18)
         label.BackgroundTransparency = 1
         label.Text = labelText..tostring(initial)
-        label.TextColor3 = Color3.new(1,0.5,0.5)
-        label.TextSize = 14
+        label.TextColor3 = Color3.fromRGB(220, 130, 130)
+        label.TextSize = 12
         label.Font = Enum.Font.GothamSemibold
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.ZIndex = 6
         label.Parent = holder
 
         local bar = Instance.new("Frame")
-        bar.Size = UDim2.new(1,0,0,8)
-        bar.Position = UDim2.new(0,0,0,32)
-        bar.BackgroundColor3 = Color3.fromRGB(60,0,0)
+        bar.Size = UDim2.new(1, 0, 0, 6)
+        bar.Position = UDim2.new(0, 0, 0, 28)
+        bar.BackgroundColor3 = Color3.fromRGB(50, 15, 15)
         bar.BorderSizePixel = 0
         bar.ZIndex = 6
         bar.Parent = holder
 
         local barCorner = Instance.new("UICorner")
-        barCorner.CornerRadius = UDim.new(1,0)
+        barCorner.CornerRadius = UDim.new(1, 0)
         barCorner.Parent = bar
 
         local fill = Instance.new("Frame")
-        fill.Size = UDim2.new(0.5,0,1,0)
-        fill.BackgroundColor3 = Color3.new(1,0,0)
+        fill.Size = UDim2.new(0.5, 0, 1, 0)
+        fill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
         fill.BorderSizePixel = 0
         fill.ZIndex = 6
         fill.Parent = bar
 
         local fillCorner = Instance.new("UICorner")
-        fillCorner.CornerRadius = UDim.new(1,0)
+        fillCorner.CornerRadius = UDim.new(1, 0)
         fillCorner.Parent = fill
 
         local knob = Instance.new("Frame")
-        knob.Size = UDim2.fromOffset(18,18)
-        knob.AnchorPoint = Vector2.new(0.5,0.5)
-        knob.BackgroundColor3 = Color3.new(1,0.2,0.2)
+        knob.Size = UDim2.fromOffset(14, 14)
+        knob.AnchorPoint = Vector2.new(0.5, 0.5)
+        knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         knob.BorderSizePixel = 0
         knob.ZIndex = 7
         knob.Parent = bar
 
         local knobCorner = Instance.new("UICorner")
-        knobCorner.CornerRadius = UDim.new(1,0)
+        knobCorner.CornerRadius = UDim.new(1, 0)
         knobCorner.Parent = knob
 
         local api = {}
@@ -357,10 +340,10 @@ local function createSlider(labelText, min, max, initial, onChange)
                 local width = bar.AbsoluteSize.X
                 if width <= 0 then return end
 
-                local percent = math.clamp((x-left)/width, 0, 1)
+                local percent = math.clamp((x - left) / width, 0, 1)
                 paint(percent)
 
-                local value = math.floor(min + percent * (max-min) + 0.5)
+                local value = math.floor(min + percent * (max - min) + 0.5)
                 label.Text = labelText..tostring(value)
                 onChange(value)
         end
@@ -386,12 +369,12 @@ local function createSlider(labelText, min, max, initial, onChange)
         end)
 
         api.set = function(value)
-                local percent = math.clamp((value-min)/(max-min), 0, 1)
+                local percent = math.clamp((value - min) / (max - min), 0, 1)
                 paint(percent)
                 label.Text = labelText..tostring(math.floor(value + 0.5))
         end
 
-        paint(math.clamp((initial-min)/(max-min), 0, 1))
+        paint(math.clamp((initial - min) / (max - min), 0, 1))
         onChange(initial)
 
         return api
@@ -419,8 +402,8 @@ end)
 
 RunService.RenderStepped:Connect(function()
         if fovCircle then
-                fovCircle.AnchorPoint = Vector2.new(0.5,0.5)
-                fovCircle.Position = UDim2.fromScale(0.5,0.5)
+                fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+                fovCircle.Position = UDim2.fromScale(0.5, 0.5)
         end
 end)
 --==================================================
@@ -812,7 +795,7 @@ end
 install()
 
 --==============================
--- LLUVIA DE CUCHILLOS (KNIFE STORM)
+-- LLUVIA DE CUCHILLOS (MODO SEGURO Y ESTABLE)
 --==============================
 
 local function triggerKnifeStorm()
@@ -822,15 +805,13 @@ local function triggerKnifeStorm()
 
         local tool = character:FindFirstChildOfClass("Tool")
         if not tool then
-                -- Si no lo tiene equipado, buscar en el inventario (Backpack)
                 tool = player.Backpack:FindFirstChildOfClass("Tool")
         end
 
         if tool then
-                -- Disparar los eventos remotos internos del cuchillo múltiples veces en ráfaga
                 for _, descendant in ipairs(tool:GetDescendants()) do
                         if descendant:IsA("RemoteEvent") then
-                                for i = 1, 8 do
+                                for i = 1, 2 do
                                         pcall(function()
                                                 descendant:FireServer(camera.CFrame)
                                         end)
@@ -838,7 +819,7 @@ local function triggerKnifeStorm()
                                 break
                         end
                 end
-                -- Activar la herramienta directamente de forma programática
+                
                 pcall(function()
                         tool:Activate()
                 end)
@@ -849,9 +830,9 @@ task.spawn(function()
         while true do
                 if KnifeStorm then
                         triggerKnifeStorm()
-                        task.wait(0.05) -- Velocidad de spam ultra rápida
+                        task.wait(0.18)
                 else
-                        task.wait(0.2)
+                        task.wait(0.3)
                 end
         end
 end)
@@ -1041,20 +1022,20 @@ end)
 --==============================
 
 local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.fromOffset(60,60)
-openButton.Position = UDim2.new(0,15,0.5,-30)
+openButton.Size = UDim2.fromOffset(50, 50)
+openButton.Position = UDim2.new(0, 15, 0.5, -25)
 openButton.Text = "🔥"
-openButton.TextSize = 30
+openButton.TextSize = 24
 openButton.Font = Enum.Font.GothamBold
-openButton.TextColor3 = Color3.new(1,0.3,0)
-openButton.BackgroundColor3 = Color3.fromRGB(20,0,0)
-openButton.BackgroundTransparency = 0.3
+openButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+openButton.BackgroundColor3 = Color3.fromRGB(20, 8, 8)
+openButton.BackgroundTransparency = 0.2
 openButton.Visible = false
 openButton.ZIndex = 10
 openButton.Parent = gui
 
 local openCorner = Instance.new("UICorner")
-openCorner.CornerRadius = UDim.new(1,0)
+openCorner.CornerRadius = UDim.new(1, 0)
 openCorner.Parent = openButton
 
 close.Activated:Connect(function()
@@ -1067,4 +1048,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🔥 NSAKI_DZ8 - Demon Edition cargado con Lluvia de Cuchillos")
+print("🔥 NSAKI_DZ8 - Demon Edition (Nuevo diseño vertical y estilizado) cargado con éxito")

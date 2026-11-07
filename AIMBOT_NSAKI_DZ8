@@ -1,5 +1,5 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 3 (ESTILO B&W / BOTÓN LATERAL)
+-- DARKSHIELD  |  PARTE 1 DE 3 (SISTEMA DE APERTURA / CIERRE LATERAL)
 -- LocalScript | StarterPlayer > StarterPlayerScripts
 --==================================================
 
@@ -105,7 +105,7 @@ creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
 creator.Parent = main
 
--- Botón 'X' ubicado al costado del menú en el medio exacto (Borde derecho, centro vertical)
+-- Botón 'X' al costado del menú en el medio exacto para cerrar
 local close = Instance.new("TextButton")
 close.Size = UDim2.fromOffset(34, 34)
 close.Position = UDim2.new(1, 10, 0.5, -17)
@@ -127,7 +127,7 @@ closeStroke.Thickness = 1.5
 closeStroke.Color = Color3.fromRGB(150, 150, 150)
 closeStroke.Parent = close
 
--- Zona desplazable con margen inferior extra para visualizar hasta el último elemento
+-- Zona desplazable con espacio holgado al final
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, 0, 1, -70)
 scroll.Position = UDim2.fromOffset(0, 70)
@@ -145,7 +145,7 @@ local scrollPad = Instance.new("UIPadding")
 scrollPad.PaddingLeft = UDim.new(0, 16)
 scrollPad.PaddingRight = UDim.new(0, 16)
 scrollPad.PaddingTop = UDim.new(0, 10)
-scrollPad.PaddingBottom = UDim.new(0, 45) -- Espacio holgado extra para llegar al final sin cortes
+scrollPad.PaddingBottom = UDim.new(0, 50)
 scrollPad.Parent = scroll
 
 local scrollList = Instance.new("UIListLayout")
@@ -154,7 +154,7 @@ scrollList.SortOrder = Enum.SortOrder.LayoutOrder
 scrollList.Parent = scroll
 
 local function updateCanvas()
-        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 50)
+        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 60)
 end
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 updateCanvas()
@@ -909,18 +909,18 @@ anchorButton.Activated:Connect(function()
         end
 end)
 
--- Abrir / Cerrar Menú (Botón lateral 'X' y botón flotante en la misma zona media)
+-- Botón flotante para reabrir el menú ubicado exactamente en la misma zona media derecha
 local openButton = Instance.new("TextButton")
 openButton.Size = UDim2.fromOffset(48, 48)
-openButton.Position = UDim2.new(0.5, -24, 0.5, -24)
+openButton.Position = UDim2.new(0.5, 175, 0.5, -24)
 openButton.Text = "🛡️"
 openButton.TextSize = 22
 openButton.Font = Enum.Font.GothamBold
 openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 openButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-openButton.BackgroundTransparency = 0.2
+openButton.BackgroundTransparency = 0
 openButton.Visible = false
-openButton.ZIndex = 10
+openButton.ZIndex = 12
 openButton.Parent = gui
 
 local openCorner = Instance.new("UICorner")
@@ -929,7 +929,7 @@ openCorner.Parent = openButton
 
 local openStroke = Instance.new("UIStroke")
 openStroke.Thickness = 1.5
-openStroke.Color = Color3.fromRGB(100, 100, 100)
+openStroke.Color = Color3.fromRGB(150, 150, 150)
 openStroke.Parent = openButton
 
 close.Activated:Connect(function()
@@ -942,4 +942,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado exitosamente")
+print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente con botón de apertura/cierre lateral")

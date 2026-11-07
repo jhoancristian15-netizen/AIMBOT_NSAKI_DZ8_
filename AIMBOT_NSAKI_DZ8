@@ -23,9 +23,7 @@ local Invisible = false
 local BringAll = false
 local BringNPCs = false
 local AnchorBring = false
-local Wallbang = false
 local SilentAim = false
-local KnifeStorm = false
 
 local FOV_MIN = 50
 local FOV_MAX = 300
@@ -34,19 +32,7 @@ local FOVRadius = 150
 local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
-local MAX_WALL = 6
-local MIN_BULLET_LEN = 30      -- Solo se procesan rayos largos (balas)
-local WALL_COOLDOWN = 0.005    -- Máximo 200 procesados por segundo
-local MAX_WALLS = 2
 local ESP_NAME = "DARKSHIELD_ESP"
-
-local INCLUDE, EXCLUDE
-do
-        local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
-        INCLUDE = ok1 and v1 or Enum.RaycastFilterType.Whitelist
-        local ok2, v2 = pcall(function() return Enum.RaycastFilterType.Exclude end)
-        EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
-end
 
 --==============================
 -- GUI (ESTILO NEGRO Y BLANCO)
@@ -486,9 +472,7 @@ local invisibleButton = createButton("🌀 Invisible: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
-local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
 local silentButton = createButton("🔫 Redirigir Balas: OFF")
-local knifeButton = createButton("🔪 Lluvia de Cuchillos: OFF")
 
 local fovCircle = Instance.new("Frame")
 fovCircle.Name = "FOVCircle"
@@ -518,7 +502,10 @@ RunService.RenderStepped:Connect(function()
         end
 end)
 
--- ESP Rainbow
+--==============================
+-- ESP RAINBOW (SOBREVIVE A LAS RONDAS)
+--==============================
+
 local function removeESP(character)
         if not character then return end
         local old = character:FindFirstChild(ESP_NAME)
@@ -576,14 +563,57 @@ local function updateESP()
         end
 end
 
-Players.PlayerAdded:Connect(function(plr)
-        plr.CharacterAdded:Connect(function(character)
+-- Conexión por jugador para re-aplicar el ESP al reaparecer
+local espConnections = {}
+
+local function setupESPPlayer(plr)
+        if plr == player then return end
+        if espConnections[plr] then return end
+
+        espConnections[plr] = plr.CharacterAdded:Connect(function(character)
                 character:WaitForChild("Humanoid", 5)
-                task.wait(0.2)
-                if ESP then addESP(character) end
+                task.wait(0.35)
+                if ESP then
+                        addESP(character)
+                end
         end)
+
+        if ESP and plr.Character then
+                addESP(plr.Character)
+        end
+end
+
+for _, plr in ipairs(Players:GetPlayers()) do
+        setupESPPlayer(plr)
+end
+
+Players.PlayerAdded:Connect(setupESPPlayer)
+
+Players.PlayerRemoving:Connect(function(plr)
+        local conn = espConnections[plr]
+        if conn then
+                conn:Disconnect()
+                espConnections[plr] = nil
+        end
+        removeESP(plr.Character)
 end)
-Players.PlayerRemoving:Connect(function(plr) removeESP(plr.Character) end)
+
+-- Refuerzo: si un personaje nuevo se quedó sin resaltado, se vuelve a poner
+task.spawn(function()
+        while true do
+                if ESP then
+                        for _, plr in ipairs(Players:GetPlayers()) do
+                                if plr ~= player and plr.Character then
+                                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                                        if hum and hum.Health > 0 and not plr.Character:FindFirstChild(ESP_NAME) then
+                                                addESP(plr.Character)
+                                        end
+                                end
+                        end
+                end
+                task.wait(1)
+        end
+end)
 
 -- Invisibilidad y Noclip
 local function setInvisible()
@@ -705,33 +735,11 @@ local function disableXRay()
 end
 
 --==============================
--- WALLBANG / SILENT AIM (LIGERO)
+-- REDIRIGIR BALAS (SILENT AIM)
 --==============================
 
 local redirected = 0
 local hooked = false
-local charCache = {}
-
-local function characters()
-        local list = {}
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 then
-                                table.insert(list, plr.Character)
-                        end
-                end
-        end
-        return list
-end
-
--- La lista de personajes se refresca cada medio segundo, no en cada rayo
-task.spawn(function()
-        while true do
-                charCache = characters()
-                task.wait(0.5)
-        end
-end)
 
 local function closestHeadSilent()
         local cam = workspace.CurrentCamera
@@ -759,62 +767,8 @@ local function closestHeadSilent()
         return best
 end
 
-local function params(filterType, list)
-        local p = RaycastParams.new()
-        p.FilterType = filterType
-        p.FilterDescendantsInstances = list
-        p.IgnoreWater = true
-        return p
-end
-
-local function wallbangCast(origin, direction)
-        local len = direction.Magnitude
-        if len < 0.1 then return nil end
-
-        local unit = direction.Unit
-        local chars = charCache
-        if #chars == 0 then return nil end
-
-        local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
-        if not hit or not hit.Instance then return nil end
-
-        local travel = (hit.Position - origin).Magnitude
-        if travel <= 0.1 then return hit end
-
-        local world = params(EXCLUDE, chars)
-        local cursor = origin
-        local used = 0
-
-        for _ = 1, MAX_WALLS do
-                local remaining = travel - used
-                if remaining <= 0.05 then break end
-
-                local wall = workspace:Raycast(cursor, unit * remaining, world)
-                if not wall then break end
-
-                local probeList = table.clone(chars)
-                table.insert(probeList, wall.Instance)
-                local probe = workspace:Raycast(
-                        wall.Position + unit * 0.02,
-                        unit * (MAX_WALL + 1),
-                        params(EXCLUDE, probeList)
-                )
-
-                if not probe then return nil end
-
-                local thickness = (probe.Position - wall.Position).Magnitude
-                if thickness > MAX_WALL then return nil end
-
-                cursor = probe.Position + unit * 0.02
-                used = (cursor - origin).Magnitude
-        end
-
-        return hit
-end
-
 local guard = false
 local original
-local lastWallbang = 0
 
 local function install()
         if original then return end
@@ -838,49 +792,6 @@ local function install()
                         end
                 end
 
-                if Wallbang and self == workspace then
-                        local args = { ... }
-                        local origin = nil
-                        local direction = nil
-                        local legacy = false
-
-                        if method == "Raycast" then
-                                origin = args[1]
-                                direction = args[2]
-                        elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
-                                local ray = args[1]
-                                if typeof(ray) == "Ray" then
-                                        origin = ray.Origin
-                                        direction = ray.Direction
-                                        legacy = true
-                                end
-                        end
-
-                        -- Solo rayos largos: las balas. Los cortos (cámara, suelo) se dejan intactos
-                        if origin and direction
-                                and typeof(origin) == "Vector3"
-                                and typeof(direction) == "Vector3"
-                                and direction.Magnitude >= MIN_BULLET_LEN then
-
-                                local now = os.clock()
-                                if now - lastWallbang >= WALL_COOLDOWN then
-                                        lastWallbang = now
-
-                                        guard = true
-                                        local okCast, hit = pcall(wallbangCast, origin, direction)
-                                        guard = false
-
-                                        if okCast and hit then
-                                                redirected = redirected + 1
-                                                if legacy then
-                                                        return hit.Instance, hit.Position, hit.Normal, hit.Material
-                                                end
-                                                return hit
-                                        end
-                                end
-                        end
-                end
-
                 return original(self, ...)
         end)
 
@@ -889,81 +800,6 @@ local function install()
                 hooked = true
         end
 end
-
-install()
-
---==============================
--- LLUVIA DE CUCHILLOS (SIN KICK)
---==============================
-
-local STORM_INTERVAL = 0.22
-
-local function findThrowRemote(tool)
-        local fallback = nil
-
-        for _, d in ipairs(tool:GetDescendants()) do
-                if d:IsA("RemoteEvent") then
-                        local n = string.lower(d.Name)
-                        if n:find("throw") or n:find("knife") or n:find("attack")
-                                or n:find("swing") or n:find("fire") or n:find("shoot") then
-                                return d
-                        end
-                        if not fallback then
-                                fallback = d
-                        end
-                end
-        end
-
-        return fallback
-end
-
-local function knifeStormStep()
-        local character = player.Character
-        if not character then return end
-
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return end
-
-        local tool = character:FindFirstChildOfClass("Tool")
-
-        if not tool then
-                local backpackTool = player.Backpack:FindFirstChildOfClass("Tool")
-                if backpackTool then
-                        pcall(function()
-                                humanoid:EquipTool(backpackTool)
-                        end)
-                end
-                return
-        end
-
-        pcall(function()
-                tool:Activate()
-        end)
-
-        task.wait(0.06)
-
-        pcall(function()
-                tool:Activate()
-        end)
-
-        local remote = findThrowRemote(tool)
-        if remote then
-                pcall(function()
-                        remote:FireServer()
-                end)
-        end
-end
-
-task.spawn(function()
-        while true do
-                if KnifeStorm then
-                        knifeStormStep()
-                        task.wait(STORM_INTERVAL)
-                else
-                        task.wait(0.3)
-                end
-        end
-end)
 
 -- NPCs Caché
 local npcCache = {}
@@ -1059,6 +895,13 @@ end)
 espButton.Activated:Connect(function()
         ESP = not ESP
         espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
+
+        if ESP then
+                for _, plr in ipairs(Players:GetPlayers()) do
+                        setupESPPlayer(plr)
+                end
+        end
+
         updateESP()
 end)
 
@@ -1084,21 +927,13 @@ xrayButton.Activated:Connect(function()
         if XRay then enableXRay() else disableXRay() end
 end)
 
-wallbangButton.Activated:Connect(function()
-        Wallbang = not Wallbang
-        wallbangButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
-        install()
-end)
-
 silentButton.Activated:Connect(function()
         SilentAim = not SilentAim
         silentButton.Text = SilentAim and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"
-        install()
-end)
 
-knifeButton.Activated:Connect(function()
-        KnifeStorm = not KnifeStorm
-        knifeButton.Text = KnifeStorm and "🔪 Lluvia de Cuchillos: ON" or "🔪 Lluvia de Cuchillos: OFF"
+        if SilentAim then
+                install()
+        end
 end)
 
 bringButton.Activated:Connect(function()
@@ -1174,4 +1009,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print(" DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente con botón de apertura/cierre lateral")
+print(" DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente")

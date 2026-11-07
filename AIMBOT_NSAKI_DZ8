@@ -1,7 +1,6 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 3
--- LocalScript | Estilo Negro y Blanco / Ampliado
--- StarterPlayer > StarterPlayerScripts
+-- DARKSHIELD  |  PARTE 1 DE 3 (REDESIGN: NEGRO Y BLANCO)
+-- LocalScript | StarterPlayer > StarterPlayerScripts
 --==================================================
 
 local Players = game:GetService("Players")
@@ -54,7 +53,7 @@ do
 end
 
 --==============================
--- GUI (ESTILO NEGRO Y BLANCO / MÁS GRANDE)
+-- GUI (ESTILO NEGRO Y BLANCO / AMPLIADO)
 --==============================
 
 local gui = Instance.new("ScreenGui")
@@ -63,9 +62,9 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(320, 580) -- Más grande y amplio
-main.Position = UDim2.new(0.5, -160, 0.5, -290)
-main.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+main.Size = UDim2.fromOffset(340, 620) -- Más grande y amplio para que todo encaje perfecto
+main.Position = UDim2.new(0.5, -170, 0.5, -310)
+main.BackgroundColor3 = Color3.fromRGB(8, 8, 8) -- Negro puro profundo
 main.BackgroundTransparency = 0.05
 main.BorderSizePixel = 0
 main.ClipsDescendants = true
@@ -73,56 +72,57 @@ main.ZIndex = 5
 main.Parent = gui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.CornerRadius = UDim.new(0, 12)
 mainCorner.Parent = main
 
--- Borde fino blanco para contraste minimalista
+-- Borde exterior blanco fino para contraste moderno
 local mainStroke = Instance.new("UIStroke")
-mainStroke.Thickness = 1
-mainStroke.Color = Color3.fromRGB(50, 50, 50)
+mainStroke.Thickness = 1.5
+mainStroke.Color = Color3.fromRGB(60, 60, 60)
 mainStroke.Parent = main
 
--- Barra superior de acento blanco puro
+-- Barra superior de acento en blanco puro
 local topBar = Instance.new("Frame")
-topBar.Size = UDim2.new(1, 0, 0, 3)
+topBar.Size = UDim2.new(1, 0, 0, 4)
 topBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 topBar.BorderSizePixel = 0
 topBar.ZIndex = 6
 topBar.Parent = main
 
 --==============================
--- TÍTULO Y DESCRIPCIÓN
+-- TÍTULO Y DESCRIPCIÓN (DARKSHIELD)
 --==============================
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -55, 0, 35)
-title.Position = UDim2.fromOffset(16, 12)
+title.Size = UDim2.new(1, -70, 0, 35)
+title.Position = UDim2.fromOffset(16, 14)
 title.BackgroundTransparency = 1
 title.Text = "DARKSHIELD"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 22
+title.TextColor3 = Color3.fromRGB(255, 255, 255) -- Blanco puro
+title.TextSize = 24
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.ZIndex = 6
 title.Parent = main
 
 local creator = Instance.new("TextLabel")
-creator.Size = UDim2.new(1, -55, 0, 16)
-creator.Position = UDim2.fromOffset(16, 45)
+creator.Size = UDim2.new(1, -70, 0, 18)
+creator.Position = UDim2.fromOffset(16, 48)
 creator.BackgroundTransparency = 1
 creator.Text = "CREATED BY NSAKI_DZHUB"
-creator.TextColor3 = Color3.fromRGB(160, 160, 160)
-creator.TextSize = 10
+creator.TextColor3 = Color3.fromRGB(170, 170, 170) -- Gris claro
+creator.TextSize = 11
 creator.Font = Enum.Font.GothamBold
 creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
 creator.Parent = main
 
+-- Botón de cerrar (Ubicado cómodamente gracias al nuevo tamaño)
 local close = Instance.new("TextButton")
-close.Size = UDim2.fromOffset(32, 32)
-close.Position = UDim2.new(1, -44, 0, 14)
+close.Size = UDim2.fromOffset(36, 36)
+close.Position = UDim2.new(1, -48, 0, 16)
 close.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-close.BackgroundTransparency = 0.3
+close.BackgroundTransparency = 0.2
 close.Text = "✕"
 close.TextColor3 = Color3.fromRGB(255, 255, 255)
 close.TextSize = 16
@@ -131,12 +131,12 @@ close.ZIndex = 7
 close.Parent = main
 
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.CornerRadius = UDim.new(0, 8)
 closeCorner.Parent = close
 
 local closeStroke = Instance.new("UIStroke")
 closeStroke.Thickness = 1
-closeStroke.Color = Color3.fromRGB(70, 70, 70)
+closeStroke.Color = Color3.fromRGB(90, 90, 90)
 closeStroke.Parent = close
 
 --==============================
@@ -144,14 +144,14 @@ closeStroke.Parent = close
 --==============================
 
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 1, -75)
-scroll.Position = UDim2.fromOffset(0, 75)
+scroll.Size = UDim2.new(1, 0, 1, -80)
+scroll.Position = UDim2.fromOffset(0, 80)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-scroll.ScrollBarThickness = 3
-scroll.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
+scroll.ScrollBarThickness = 4
+scroll.ScrollBarImageColor3 = Color3.fromRGB(220, 220, 220)
 scroll.ScrollBarImageTransparency = 0.3
 scroll.ClipsDescendants = true
 scroll.ZIndex = 6
@@ -160,8 +160,8 @@ scroll.Parent = main
 local scrollPad = Instance.new("UIPadding")
 scrollPad.PaddingLeft = UDim.new(0, 16)
 scrollPad.PaddingRight = UDim.new(0, 16)
-scrollPad.PaddingTop = UDim.new(0, 4)
-scrollPad.PaddingBottom = UDim.new(0, 16)
+scrollPad.PaddingTop = UDim.new(0, 6)
+scrollPad.PaddingBottom = UDim.new(0, 20)
 scrollPad.Parent = scroll
 
 local scrollList = Instance.new("UIListLayout")
@@ -170,7 +170,7 @@ scrollList.SortOrder = Enum.SortOrder.LayoutOrder
 scrollList.Parent = scroll
 
 local function updateCanvas()
-        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 20)
+        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 25)
 end
 
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
@@ -214,19 +214,19 @@ end)
 
 local function createButton(text)
         local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1, 0, 0, 40)
-        button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-        button.BackgroundTransparency = 0.2
+        button.Size = UDim2.new(1, 0, 0, 42)
+        button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+        button.BackgroundTransparency = 0.15
         button.BorderSizePixel = 0
         button.Text = text
-        button.TextColor3 = Color3.fromRGB(230, 230, 230)
-        button.TextSize = 13
+        button.TextColor3 = Color3.fromRGB(240, 240, 240)
+        button.TextSize = 13.5
         button.Font = Enum.Font.GothamMedium
         button.ZIndex = 6
         button.Parent = scroll
 
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6)
+        corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = button
 
         local stroke = Instance.new("UIStroke")
@@ -235,11 +235,11 @@ local function createButton(text)
         stroke.Parent = button
 
         button.MouseEnter:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-                stroke.Color = Color3.fromRGB(100, 100, 100)
+                button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+                stroke.Color = Color3.fromRGB(150, 150, 150)
         end)
         button.MouseLeave:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+                button.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
                 stroke.Color = Color3.fromRGB(45, 45, 45)
         end)
 
@@ -289,22 +289,22 @@ local function updateFOV()
 end
 
 --==============================
--- SLIDERS (ESTILO BLANCO Y NEGRO)
+-- SLIDERS (ESTILO NEGRO Y BLANCO)
 --==============================
 
 local function createSlider(labelText, min, max, initial, onChange)
         local holder = Instance.new("Frame")
-        holder.Size = UDim2.new(1, 0, 0, 48)
+        holder.Size = UDim2.new(1, 0, 0, 50)
         holder.BackgroundTransparency = 1
         holder.ZIndex = 6
         holder.Parent = scroll
 
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 0, 18)
+        label.Size = UDim2.new(1, 0, 0, 20)
         label.BackgroundTransparency = 1
         label.Text = labelText..tostring(initial)
-        label.TextColor3 = Color3.fromRGB(200, 200, 200)
-        label.TextSize = 12
+        label.TextColor3 = Color3.fromRGB(210, 210, 210)
+        label.TextSize = 13
         label.Font = Enum.Font.GothamSemibold
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.ZIndex = 6
@@ -312,7 +312,7 @@ local function createSlider(labelText, min, max, initial, onChange)
 
         local bar = Instance.new("Frame")
         bar.Size = UDim2.new(1, 0, 0, 6)
-        bar.Position = UDim2.new(0, 0, 0, 30)
+        bar.Position = UDim2.new(0, 0, 0, 32)
         bar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
         bar.BorderSizePixel = 0
         bar.ZIndex = 6
@@ -334,9 +334,9 @@ local function createSlider(labelText, min, max, initial, onChange)
         fillCorner.Parent = fill
 
         local knob = Instance.new("Frame")
-        knob.Size = UDim2.fromOffset(14, 14)
+        knob.Size = UDim2.fromOffset(16, 16)
         knob.AnchorPoint = Vector2.new(0.5, 0.5)
-        knob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+        knob.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
         knob.BorderSizePixel = 0
         knob.ZIndex = 7
         knob.Parent = bar
@@ -1040,13 +1040,13 @@ end)
 --==============================
 
 local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.fromOffset(45, 45)
-openButton.Position = UDim2.new(0, 15, 0.5, -22)
+openButton.Size = UDim2.fromOffset(48, 48)
+openButton.Position = UDim2.new(0, 15, 0.5, -24)
 openButton.Text = "🛡️"
 openButton.TextSize = 22
 openButton.Font = Enum.Font.GothamBold
 openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+openButton.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 openButton.BackgroundTransparency = 0.2
 openButton.Visible = false
 openButton.ZIndex = 10
@@ -1057,8 +1057,8 @@ openCorner.CornerRadius = UDim.new(1, 0)
 openCorner.Parent = openButton
 
 local openStroke = Instance.new("UIStroke")
-openStroke.Thickness = 1
-openStroke.Color = Color3.fromRGB(60, 60, 60)
+openStroke.Thickness = 1.5
+openStroke.Color = Color3.fromRGB(80, 80, 80)
 openStroke.Parent = openButton
 
 close.Activated:Connect(function()
@@ -1071,4 +1071,4 @@ openButton.Activated:Connect(function()
         openButton.Visible = false
 end)
 
-print("🛡️ DARKSHIELD - Creado por NSAKI_DZHUB cargado con éxito")
+print("🛡️ DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente en estilo Negro y Blanco")

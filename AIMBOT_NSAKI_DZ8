@@ -23,6 +23,7 @@ local Invisible = false
 local BringAll = false
 local BringNPCs = false
 local AnchorBring = false
+local Wallbang = false
 local SilentAim = false
 
 local FOV_MIN = 50
@@ -32,7 +33,21 @@ local FOVRadius = 150
 local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
+
+local MAX_WALL = 6
+local MAX_WALLS = 2
+local MIN_BULLET_LEN = 30
+local WALL_COOLDOWN = 0.006
+
 local ESP_NAME = "DARKSHIELD_ESP"
+
+local INCLUDE, EXCLUDE
+do
+        local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
+        INCLUDE = ok1 and v1 or Enum.RaycastFilterType.Whitelist
+        local ok2, v2 = pcall(function() return Enum.RaycastFilterType.Exclude end)
+        EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
+end
 
 --==============================
 -- GUI (ESTILO NEGRO Y BLANCO)
@@ -472,6 +487,7 @@ local invisibleButton = createButton("🌀 Invisible: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
+local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
 local silentButton = createButton("🔫 Redirigir Balas: OFF")
 
 local fovCircle = Instance.new("Frame")
@@ -563,7 +579,6 @@ local function updateESP()
         end
 end
 
--- Conexión por jugador para re-aplicar el ESP al reaparecer
 local espConnections = {}
 
 local function setupESPPlayer(plr)
@@ -598,7 +613,6 @@ Players.PlayerRemoving:Connect(function(plr)
         removeESP(plr.Character)
 end)
 
--- Refuerzo: si un personaje nuevo se quedó sin resaltado, se vuelve a poner
 task.spawn(function()
         while true do
                 if ESP then
@@ -735,11 +749,32 @@ local function disableXRay()
 end
 
 --==============================
--- REDIRIGIR BALAS (SILENT AIM)
+-- WALLBANG / SILENT AIM
 --==============================
 
 local redirected = 0
 local hooked = false
+local charCache = {}
+
+local function refreshChars()
+        local list = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        if hum and hum.Health > 0 then
+                                table.insert(list, plr.Character)
+                        end
+                end
+        end
+        charCache = list
+end
+
+task.spawn(function()
+        while true do
+                refreshChars()
+                task.wait(0.5)
+        end
+end)
 
 local function closestHeadSilent()
         local cam = workspace.CurrentCamera
@@ -767,8 +802,61 @@ local function closestHeadSilent()
         return best
 end
 
+local function params(filterType, list)
+        local p = RaycastParams.new()
+        p.FilterType = filterType
+        p.FilterDescendantsInstances = list
+        p.IgnoreWater = true
+        return p
+end
+
+local function wallbangCast(origin, direction)
+        if direction.Magnitude < 0.1 then return nil end
+
+        local unit = direction.Unit
+        local chars = charCache
+        if #chars == 0 then return nil end
+
+        local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
+        if not hit or not hit.Instance then return nil end
+
+        local travel = (hit.Position - origin).Magnitude
+        if travel <= 0.1 then return hit end
+
+        local world = params(EXCLUDE, chars)
+        local cursor = origin
+        local used = 0
+
+        for _ = 1, MAX_WALLS do
+                local remaining = travel - used
+                if remaining <= 0.05 then break end
+
+                local wall = workspace:Raycast(cursor, unit * remaining, world)
+                if not wall then break end
+
+                local probeList = table.clone(chars)
+                table.insert(probeList, wall.Instance)
+                local probe = workspace:Raycast(
+                        wall.Position + unit * 0.02,
+                        unit * (MAX_WALL + 1),
+                        params(EXCLUDE, probeList)
+                )
+
+                if not probe then return nil end
+
+                local thickness = (probe.Position - wall.Position).Magnitude
+                if thickness > MAX_WALL then return nil end
+
+                cursor = probe.Position + unit * 0.02
+                used = (cursor - origin).Magnitude
+        end
+
+        return hit
+end
+
 local guard = false
 local original
+local lastWallbang = 0
 
 local function install()
         if original then return end
@@ -788,6 +876,48 @@ local function install()
                                         local origin = workspace.CurrentCamera.CFrame.Position
                                         redirected = redirected + 1
                                         return Ray.new(origin, (head.Position - origin).Unit * 2000)
+                                end
+                        end
+                end
+
+                if Wallbang and self == workspace then
+                        local args = { ... }
+                        local origin = nil
+                        local direction = nil
+                        local legacy = false
+
+                        if method == "Raycast" then
+                                origin = args[1]
+                                direction = args[2]
+                        elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
+                                local ray = args[1]
+                                if typeof(ray) == "Ray" then
+                                        origin = ray.Origin
+                                        direction = ray.Direction
+                                        legacy = true
+                                end
+                        end
+
+                        if origin and direction
+                                and typeof(origin) == "Vector3"
+                                and typeof(direction) == "Vector3"
+                                and direction.Magnitude >= MIN_BULLET_LEN then
+
+                                local now = os.clock()
+                                if now - lastWallbang >= WALL_COOLDOWN then
+                                        lastWallbang = now
+
+                                        guard = true
+                                        local okCast, hit = pcall(wallbangCast, origin, direction)
+                                        guard = false
+
+                                        if okCast and hit then
+                                                redirected = redirected + 1
+                                                if legacy then
+                                                        return hit.Instance, hit.Position, hit.Normal, hit.Material
+                                                end
+                                                return hit
+                                        end
                                 end
                         end
                 end
@@ -927,13 +1057,16 @@ xrayButton.Activated:Connect(function()
         if XRay then enableXRay() else disableXRay() end
 end)
 
+wallbangButton.Activated:Connect(function()
+        Wallbang = not Wallbang
+        wallbangButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
+        install()
+end)
+
 silentButton.Activated:Connect(function()
         SilentAim = not SilentAim
         silentButton.Text = SilentAim and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"
-
-        if SilentAim then
-                install()
-        end
+        install()
 end)
 
 bringButton.Activated:Connect(function()

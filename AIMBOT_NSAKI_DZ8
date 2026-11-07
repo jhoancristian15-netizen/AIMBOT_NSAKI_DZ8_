@@ -35,6 +35,9 @@ local BRING_DISTANCE = 500
 local BRING_SPACING = 3.2
 local BRING_OFFSET = 8
 local MAX_WALL = 6
+local MIN_BULLET_LEN = 30      -- Solo se procesan rayos largos (balas)
+local WALL_COOLDOWN = 0.005    -- Máximo 200 procesados por segundo
+local MAX_WALLS = 2
 local ESP_NAME = "DARKSHIELD_ESP"
 
 local INCLUDE, EXCLUDE
@@ -284,7 +287,6 @@ end
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 updateCanvas()
 
--- Refuerzo por si el layout no avisa del cambio
 task.spawn(function()
         while true do
                 updateCanvas()
@@ -325,13 +327,11 @@ RunService.RenderStepped:Connect(function()
 
         local idle = (os.clock() - lastInput) > 0.9
 
-        -- Mientras arrastras o hay inercia, se respeta la posición
         if scrollTouching or not idle then
                 savedScroll = pos
                 return
         end
 
-        -- Solo se corrige si hubo un salto brusco al inicio
         if math.abs(pos - savedScroll) > 60 then
                 scroll.CanvasPosition = Vector2.new(0, math.clamp(savedScroll, 0, limit))
         else
@@ -704,9 +704,13 @@ local function disableXRay()
         table.clear(xrayParts)
 end
 
--- Wallbang & Silent Aim Hooks
+--==============================
+-- WALLBANG / SILENT AIM (LIGERO)
+--==============================
+
 local redirected = 0
 local hooked = false
+local charCache = {}
 
 local function characters()
         local list = {}
@@ -720,6 +724,14 @@ local function characters()
         end
         return list
 end
+
+-- La lista de personajes se refresca cada medio segundo, no en cada rayo
+task.spawn(function()
+        while true do
+                charCache = characters()
+                task.wait(0.5)
+        end
+end)
 
 local function closestHeadSilent()
         local cam = workspace.CurrentCamera
@@ -760,7 +772,7 @@ local function wallbangCast(origin, direction)
         if len < 0.1 then return nil end
 
         local unit = direction.Unit
-        local chars = characters()
+        local chars = charCache
         if #chars == 0 then return nil end
 
         local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
@@ -773,7 +785,7 @@ local function wallbangCast(origin, direction)
         local cursor = origin
         local used = 0
 
-        for _ = 1, 4 do
+        for _ = 1, MAX_WALLS do
                 local remaining = travel - used
                 if remaining <= 0.05 then break end
 
@@ -802,6 +814,7 @@ end
 
 local guard = false
 local original
+local lastWallbang = 0
 
 local function install()
         if original then return end
@@ -827,18 +840,43 @@ local function install()
 
                 if Wallbang and self == workspace then
                         local args = { ... }
+                        local origin = nil
+                        local direction = nil
+                        local legacy = false
 
                         if method == "Raycast" then
-                                local hit = wallbangCast(args[1], args[2])
-                                if hit then
-                                        redirected = redirected + 1
-                                        return hit
-                                end
+                                origin = args[1]
+                                direction = args[2]
                         elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
-                                local hit = wallbangCast(args[1].Origin, args[1].Direction)
-                                if hit then
-                                        redirected = redirected + 1
-                                        return hit.Instance, hit.Position, hit.Normal, hit.Material
+                                local ray = args[1]
+                                if typeof(ray) == "Ray" then
+                                        origin = ray.Origin
+                                        direction = ray.Direction
+                                        legacy = true
+                                end
+                        end
+
+                        -- Solo rayos largos: las balas. Los cortos (cámara, suelo) se dejan intactos
+                        if origin and direction
+                                and typeof(origin) == "Vector3"
+                                and typeof(direction) == "Vector3"
+                                and direction.Magnitude >= MIN_BULLET_LEN then
+
+                                local now = os.clock()
+                                if now - lastWallbang >= WALL_COOLDOWN then
+                                        lastWallbang = now
+
+                                        guard = true
+                                        local okCast, hit = pcall(wallbangCast, origin, direction)
+                                        guard = false
+
+                                        if okCast and hit then
+                                                redirected = redirected + 1
+                                                if legacy then
+                                                        return hit.Instance, hit.Position, hit.Normal, hit.Material
+                                                end
+                                                return hit
+                                        end
                                 end
                         end
                 end
@@ -888,7 +926,6 @@ local function knifeStormStep()
 
         local tool = character:FindFirstChildOfClass("Tool")
 
-        -- Si no lo tiene en la mano, lo equipa una vez y sale
         if not tool then
                 local backpackTool = player.Backpack:FindFirstChildOfClass("Tool")
                 if backpackTool then
@@ -899,7 +936,6 @@ local function knifeStormStep()
                 return
         end
 
-        -- Activación normal del juego (es lo que hace el botón de lanzar)
         pcall(function()
                 tool:Activate()
         end)
@@ -910,7 +946,6 @@ local function knifeStormStep()
                 tool:Activate()
         end)
 
-        -- Un solo remoto extra, no dos ni tres, para no saturar
         local remote = findThrowRemote(tool)
         if remote then
                 pcall(function()

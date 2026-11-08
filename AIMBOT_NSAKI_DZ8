@@ -1,97 +1,71 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 4
--- LocalScript | StarterPlayer > StarterPlayerScripts
+-- DARKSHIELD  |  PARTE 1 DE 8
 --==================================================
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-
-local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
-
---==============================
--- CONFIGURACIÓN
---==============================
-
-local ESP = false
-local Aimbot = false
-local XRay = false
-local Noclip = false
-local Invisible = false
-local BringAll = false
-local BringNPCs = false
-local AnchorBring = false
-local Wallbang = false
-local SilentAim = false
-local NoCooldown = false
-local InfiniteAmmo = false
-
-local FOV_MIN = 50
-local FOV_MAX = 300
-local FOVRadius = 150
-
-local BRING_DISTANCE = 500
-local BRING_SPACING = 3.2
-local BRING_OFFSET = 8
-
-local MAX_WALL = 6
-local MAX_WALLS = 2
-local MIN_BULLET_LEN = 30
-local WALL_COOLDOWN = 0.006
-
-local CD_REPEAT = 2
-local CD_REMOTE_DELAY = 0.16
-local AMMO_VALUE = 999
-local ESP_NAME = "DARKSHIELD_ESP"
-
-local INCLUDE, EXCLUDE
-do
-        local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
-        INCLUDE = ok1 and v1 or Enum.RaycastFilterType.Whitelist
-        local ok2, v2 = pcall(function() return Enum.RaycastFilterType.Exclude end)
-        EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
+local _env = getgenv()
+if not _env.DarkShield then
+    _env.DarkShield = {
+        Config = {
+            ESP = false, Aimbot = false, XRay = false, Noclip = false,
+            Invisible = false, BringAll = false, BringNPCs = false,
+            AnchorBring = false, Wallbang = false, SilentAim = false,
+            NoCooldown = false, InfiniteAmmo = false,
+            FOV_MIN = 50, FOV_MAX = 300, FOVRadius = 150,
+            BRING_DISTANCE = 500, BRING_SPACING = 3.2, BRING_OFFSET = 8,
+            MAX_WALL = 6, MAX_WALLS = 2, MIN_BULLET_LEN = 30,
+            WALL_COOLDOWN = 0.006, CD_REPEAT = 2, CD_REMOTE_DELAY = 0.16,
+            AMMO_VALUE = 999, ESP_NAME = "DARKSHIELD_ESP"
+        }
+    }
 end
 
---==============================
--- GUI (ESTILO NEGRO Y BLANCO)
---==============================
+local DS = _env.DarkShield
+DS.Players = game:GetService("Players")
+DS.RunService = game:GetService("RunService")
+DS.UserInputService = game:GetService("UserInputService")
+DS.TweenService = game:GetService("TweenService")
+DS.player = DS.Players.LocalPlayer
+DS.camera = workspace.CurrentCamera
 
+do
+    local ok1, v1 = pcall(function() return Enum.RaycastFilterType.Include end)
+    DS.INCLUDE = ok1 and v1 or Enum.RaycastFilterType.Whitelist
+    local ok2, v2 = pcall(function() return Enum.RaycastFilterType.Exclude end)
+    DS.EXCLUDE = ok2 and v2 or Enum.RaycastFilterType.Blacklist
+end
+--==================================================
+-- DARKSHIELD  |  PARTE 2 DE 8
+--==================================================
+
+local DS = getgenv().DarkShield
 local gui = Instance.new("ScreenGui")
 gui.Name = "DARKSHIELD"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = DS.player:WaitForChild("PlayerGui")
+DS.gui = gui
 
-local main = Instance.new("Frame")
+local main = Instance.new("Frame", gui)
 main.Name = "MainFrame"
 main.Size = UDim2.fromOffset(340, 600)
 main.Position = UDim2.new(0.5, -170, 0.5, -300)
 main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-main.BackgroundTransparency = 0
-main.Visible = true
 main.BorderSizePixel = 0
 main.ZIndex = 5
-main.Parent = gui
+DS.main = main
 
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12)
-mainCorner.Parent = main
-
-local mainStroke = Instance.new("UIStroke")
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+local mainStroke = Instance.new("UIStroke", main)
 mainStroke.Thickness = 2
 mainStroke.Color = Color3.fromRGB(70, 70, 70)
-mainStroke.Parent = main
 
-local topBar = Instance.new("Frame")
+local topBar = Instance.new("Frame", main)
 topBar.Size = UDim2.new(1, 0, 0, 4)
 topBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 topBar.BorderSizePixel = 0
 topBar.ZIndex = 6
-topBar.Parent = main
 
-local title = Instance.new("TextLabel")
+local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1, -20, 0, 35)
 title.Position = UDim2.fromOffset(16, 12)
 title.BackgroundTransparency = 1
@@ -101,9 +75,8 @@ title.TextSize = 22
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.ZIndex = 6
-title.Parent = main
 
-local creator = Instance.new("TextLabel")
+local creator = Instance.new("TextLabel", main)
 creator.Size = UDim2.new(1, -20, 0, 16)
 creator.Position = UDim2.fromOffset(16, 44)
 creator.BackgroundTransparency = 1
@@ -113,18 +86,23 @@ creator.TextSize = 10
 creator.Font = Enum.Font.GothamBold
 creator.TextXAlignment = Enum.TextXAlignment.Left
 creator.ZIndex = 6
-creator.Parent = main
+--==================================================
+-- DARKSHIELD  |  PARTE 3 DE 8
+--==================================================
 
-local dragBar = Instance.new("TextButton")
+local DS = getgenv().DarkShield
+local main = DS.main
+local UserInputService = DS.UserInputService
+
+local dragBar = Instance.new("TextButton", main)
 dragBar.Size = UDim2.new(1, -60, 0, 62)
 dragBar.Position = UDim2.fromOffset(8, 4)
 dragBar.BackgroundTransparency = 1
 dragBar.Text = ""
 dragBar.AutoButtonColor = false
 dragBar.ZIndex = 8
-dragBar.Parent = main
 
-local close = Instance.new("TextButton")
+local close = Instance.new("TextButton", main)
 close.Size = UDim2.fromOffset(34, 34)
 close.Position = UDim2.new(1, 10, 0.5, -17)
 close.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -134,92 +112,57 @@ close.TextColor3 = Color3.fromRGB(255, 255, 255)
 close.TextSize = 16
 close.Font = Enum.Font.GothamBold
 close.ZIndex = 12
-close.Parent = main
+DS.closeButton = close
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(1, 0)
-closeCorner.Parent = close
-
-local closeStroke = Instance.new("UIStroke")
+Instance.new("UICorner", close).CornerRadius = UDim.new(1, 0)
+local closeStroke = Instance.new("UIStroke", close)
 closeStroke.Thickness = 1.5
 closeStroke.Color = Color3.fromRGB(150, 150, 150)
-closeStroke.Parent = close
-
---==============================
--- ARRASTRAR LIBREMENTE
---==============================
 
 local function makeDraggable(object, handle)
-        local dragging = false
-        local moved = false
-        local startMouse = nil
-        local startPos = nil
-
-        handle.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = true
-                        moved = false
-
-                        local abs = object.AbsolutePosition
-                        object.Position = UDim2.fromOffset(abs.X, abs.Y)
-
-                        startMouse = input.Position
-                        startPos = object.Position
-                end
-        end)
-
-        UserInputService.InputChanged:Connect(function(input)
-                if not dragging then return end
-                if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then
-                        return
-                end
-
-                local delta = input.Position - startMouse
-                if delta.Magnitude > 4 then
-                        moved = true
-                end
-
-                local viewport = workspace.CurrentCamera.ViewportSize
-                local maxX = math.max(0, viewport.X - object.AbsoluteSize.X)
-                local maxY = math.max(0, viewport.Y - object.AbsoluteSize.Y)
-
-                local newX = math.clamp(startPos.X.Offset + delta.X, 0, maxX)
-                local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, maxY)
-
-                object.Position = UDim2.fromOffset(newX, newY)
-        end)
-
-        UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = false
-                end
-        end)
-
-        return function()
-                if moved then
-                        moved = false
-                        return true
-                end
-                return false
+    local dragging, moved = false, false
+    local startMouse, startPos = nil, nil
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; moved = false
+            local abs = object.AbsolutePosition
+            object.Position = UDim2.fromOffset(abs.X, abs.Y)
+            startMouse = input.Position; startPos = object.Position
         end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        local delta = input.Position - startMouse
+        if delta.Magnitude > 4 then moved = true end
+        local viewport = workspace.CurrentCamera.ViewportSize
+        local maxX = math.max(0, viewport.X - object.AbsoluteSize.X)
+        local maxY = math.max(0, viewport.Y - object.AbsoluteSize.Y)
+        object.Position = UDim2.fromOffset(math.clamp(startPos.X.Offset + delta.X, 0, maxX), math.clamp(startPos.Y.Offset + delta.Y, 0, maxY))
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    end)
+    return function() if moved then moved = false; return true end; return false end
 end
-
+DS.makeDraggable = makeDraggable
 makeDraggable(main, dragBar)
+--==================================================
+-- DARKSHIELD  |  PARTE 4 DE 8
+--==================================================
 
---==============================
--- TÍTULO DE ENTRADA
---==============================
+local DS = getgenv().DarkShield
+local gui, main = DS.gui, DS.main
+local TweenService, RunService, UserInputService = DS.TweenService, DS.RunService, DS.UserInputService
 
-local splash = Instance.new("Frame")
+local splash = Instance.new("Frame", gui)
 splash.Size = UDim2.fromScale(1, 1)
 splash.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 splash.BackgroundTransparency = 0.45
 splash.BorderSizePixel = 0
-splash.Active = false
 splash.ZIndex = 50
-splash.Parent = gui
 
-local splashTitle = Instance.new("TextLabel")
+local splashTitle = Instance.new("TextLabel", splash)
 splashTitle.Size = UDim2.new(1, 0, 0, 60)
 splashTitle.Position = UDim2.new(0, 0, 0.5, -50)
 splashTitle.BackgroundTransparency = 1
@@ -228,14 +171,11 @@ splashTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 splashTitle.TextSize = 46
 splashTitle.Font = Enum.Font.GothamBold
 splashTitle.ZIndex = 51
-splashTitle.Parent = splash
 
-local splashStroke = Instance.new("UIStroke")
-splashStroke.Thickness = 1.5
-splashStroke.Color = Color3.fromRGB(120, 120, 120)
-splashStroke.Parent = splashTitle
+local sStroke = Instance.new("UIStroke", splashTitle)
+sStroke.Thickness = 1.5; sStroke.Color = Color3.fromRGB(120, 120, 120)
 
-local splashSub = Instance.new("TextLabel")
+local splashSub = Instance.new("TextLabel", splash)
 splashSub.Size = UDim2.new(1, 0, 0, 20)
 splashSub.Position = UDim2.new(0, 0, 0.5, 12)
 splashSub.BackgroundTransparency = 1
@@ -244,28 +184,16 @@ splashSub.TextColor3 = Color3.fromRGB(180, 180, 180)
 splashSub.TextSize = 13
 splashSub.Font = Enum.Font.GothamBold
 splashSub.ZIndex = 51
-splashSub.Parent = splash
 
 task.delay(2.2, function()
-        local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-        TweenService:Create(splash, info, { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(splashTitle, info, { TextTransparency = 1 }):Play()
-        TweenService:Create(splashSub, info, { TextTransparency = 1 }):Play()
-
-        task.delay(0.8, function()
-                splash:Destroy()
-        end)
+    local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(splash, info, { BackgroundTransparency = 1 }):Play()
+    TweenService:Create(splashTitle, info, { TextTransparency = 1 }):Play()
+    TweenService:Create(splashSub, info, { TextTransparency = 1 }):Play()
+    task.delay(0.8, function() splash:Destroy() end)
 end)
---==================================================
--- DARKSHIELD  |  PARTE 2 DE 4
---==================================================
 
---==============================
--- ZONA DESPLAZABLE
---==============================
-
-local scroll = Instance.new("ScrollingFrame")
+local scroll = Instance.new("ScrollingFrame", main)
 scroll.Size = UDim2.new(1, 0, 1, -70)
 scroll.Position = UDim2.fromOffset(0, 70)
 scroll.BackgroundTransparency = 1
@@ -276,952 +204,551 @@ scroll.ScrollBarThickness = 4
 scroll.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
 scroll.ClipsDescendants = true
 scroll.ZIndex = 6
-scroll.Parent = main
+DS.scroll = scroll
 
-local scrollPad = Instance.new("UIPadding")
+local scrollPad = Instance.new("UIPadding", scroll)
 scrollPad.PaddingLeft = UDim.new(0, 16)
 scrollPad.PaddingRight = UDim.new(0, 16)
 scrollPad.PaddingTop = UDim.new(0, 10)
 scrollPad.PaddingBottom = UDim.new(0, 70)
-scrollPad.Parent = scroll
 
-local scrollList = Instance.new("UIListLayout")
+local scrollList = Instance.new("UIListLayout", scroll)
 scrollList.Padding = UDim.new(0, 10)
 scrollList.SortOrder = Enum.SortOrder.LayoutOrder
-scrollList.Parent = scroll
 
 local function updateCanvas()
-        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 90)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 90)
 end
 scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 updateCanvas()
+--==================================================
+-- DARKSHIELD  |  PARTE 5 DE 8
+--==================================================
 
-task.spawn(function()
-        while true do
-                updateCanvas()
-                task.wait(0.5)
-        end
-end)
-
-local scrollTouching = false
-local savedScroll = 0
-local lastInput = 0
-
-local function maxScroll()
-        return math.max(0, scroll.CanvasSize.Y - scroll.AbsoluteSize.Y)
-end
-
-scroll.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                scrollTouching = true
-                lastInput = os.clock()
-        end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                scrollTouching = false
-                lastInput = os.clock()
-        end
-end)
-
-RunService.RenderStepped:Connect(function()
-        local limit = maxScroll()
-        local pos = scroll.CanvasPosition.Y
-
-        if pos > limit + 1 then
-                pos = limit
-                scroll.CanvasPosition = Vector2.new(0, pos)
-        end
-
-        local idle = (os.clock() - lastInput) > 0.9
-
-        if scrollTouching or not idle then
-                savedScroll = pos
-                return
-        end
-
-        if math.abs(pos - savedScroll) > 60 then
-                scroll.CanvasPosition = Vector2.new(0, math.clamp(savedScroll, 0, limit))
-        else
-                savedScroll = pos
-        end
-end)
-
---==============================
--- SLIDER DE FOV
---==============================
+local DS = getgenv().DarkShield
+local scroll = DS.scroll
+local C = DS.Config
+local UserInputService = DS.UserInputService
 
 local function createSlider(labelText, min, max, initial, onChange)
-        local holder = Instance.new("Frame")
-        holder.Size = UDim2.new(1, 0, 0, 50)
-        holder.BackgroundTransparency = 1
-        holder.ZIndex = 6
-        holder.Parent = scroll
+    local holder = Instance.new("Frame", scroll)
+    holder.Size = UDim2.new(1, 0, 0, 50)
+    holder.BackgroundTransparency = 1
+    holder.ZIndex = 6
 
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 0, 20)
-        label.BackgroundTransparency = 1
-        label.Text = labelText..tostring(initial)
-        label.TextColor3 = Color3.fromRGB(240, 240, 240)
-        label.TextSize = 13
-        label.Font = Enum.Font.GothamSemibold
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.ZIndex = 6
-        label.Parent = holder
+    local label = Instance.new("TextLabel", holder)
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.BackgroundTransparency = 1
+    label.Text = labelText..tostring(initial)
+    label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    label.TextSize = 13
+    label.Font = Enum.Font.GothamSemibold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 6
 
-        local bar = Instance.new("Frame")
-        bar.Size = UDim2.new(1, 0, 0, 6)
-        bar.Position = UDim2.new(0, 0, 0, 32)
-        bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        bar.BorderSizePixel = 0
-        bar.ZIndex = 6
-        bar.Parent = holder
+    local bar = Instance.new("Frame", holder)
+    bar.Size = UDim2.new(1, 0, 0, 6)
+    bar.Position = UDim2.new(0, 0, 0, 32)
+    bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    bar.BorderSizePixel = 0
+    bar.ZIndex = 6
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
 
-        local barCorner = Instance.new("UICorner")
-        barCorner.CornerRadius = UDim.new(1, 0)
-        barCorner.Parent = bar
+    local fill = Instance.new("Frame", bar)
+    fill.Size = UDim2.new(0.5, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 6
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
-        local fill = Instance.new("Frame")
-        fill.Size = UDim2.new(0.5, 0, 1, 0)
-        fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        fill.BorderSizePixel = 0
-        fill.ZIndex = 6
-        fill.Parent = bar
+    local knob = Instance.new("Frame", bar)
+    knob.Size = UDim2.fromOffset(16, 16)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BorderSizePixel = 0
+    knob.ZIndex = 7
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-        local fillCorner = Instance.new("UICorner")
-        fillCorner.CornerRadius = UDim.new(1, 0)
-        fillCorner.Parent = fill
-
-        local knob = Instance.new("Frame")
-        knob.Size = UDim2.fromOffset(16, 16)
-        knob.AnchorPoint = Vector2.new(0.5, 0.5)
-        knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        knob.BorderSizePixel = 0
-        knob.ZIndex = 7
-        knob.Parent = bar
-
-        local knobCorner = Instance.new("UICorner")
-        knobCorner.CornerRadius = UDim.new(1, 0)
-        knobCorner.Parent = knob
-
-        local dragging = false
-        local function paint(percent)
-                knob.Position = UDim2.new(percent, 0, 0.5, 0)
-                fill.Size = UDim2.new(percent, 0, 1, 0)
+    local dragging = false
+    local function paint(p)
+        knob.Position = UDim2.new(p, 0, 0.5, 0)
+        fill.Size = UDim2.new(p, 0, 1, 0)
+    end
+    local function apply(x)
+        local left, width = bar.AbsolutePosition.X, bar.AbsoluteSize.X
+        if width <= 0 then return end
+        local p = math.clamp((x - left) / width, 0, 1)
+        paint(p)
+        local val = math.floor(min + p * (max - min) + 0.5)
+        label.Text = labelText..tostring(val)
+        onChange(val)
+    end
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; apply(input.Position.X)
         end
-
-        local function apply(x)
-                local left = bar.AbsolutePosition.X
-                local width = bar.AbsoluteSize.X
-                if width <= 0 then return end
-                local percent = math.clamp((x - left) / width, 0, 1)
-                paint(percent)
-                local value = math.floor(min + percent * (max - min) + 0.5)
-                label.Text = labelText..tostring(value)
-                onChange(value)
-        end
-
-        bar.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = true
-                        lastInput = os.clock()
-                        apply(input.Position.X)
-                end
-        end)
-
-        UserInputService.InputChanged:Connect(function(input)
-                if not dragging then return end
-                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                        lastInput = os.clock()
-                        apply(input.Position.X)
-                end
-        end)
-
-        UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = false
-                        lastInput = os.clock()
-                end
-        end)
-
-        paint(math.clamp((initial - min) / (max - min), 0, 1))
-        onChange(initial)
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then apply(input.Position.X) end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    end)
+    paint(math.clamp((initial - min) / (max - min), 0, 1))
+    onChange(initial)
 end
-
-createSlider("🎯 FOV Aimbot: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
-        FOVRadius = value
-end)
---==================================================
--- DARKSHIELD  |  PARTE 3 DE 4
---==================================================
+createSlider("🎯 FOV Aimbot: ", C.FOV_MIN, C.FOV_MAX, C.FOVRadius, function(v) C.FOVRadius = v end)
 
 local function createButton(text)
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1, 0, 0, 42)
-        button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-        button.BackgroundTransparency = 0
-        button.BorderSizePixel = 0
-        button.Text = text
-        button.TextColor3 = Color3.fromRGB(240, 240, 240)
-        button.TextSize = 13.5
-        button.Font = Enum.Font.GothamMedium
-        button.ZIndex = 6
-        button.Parent = scroll
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = button
-
-        local stroke = Instance.new("UIStroke")
-        stroke.Thickness = 1
-        stroke.Color = Color3.fromRGB(50, 50, 50)
-        stroke.Parent = button
-
-        button.MouseEnter:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                stroke.Color = Color3.fromRGB(200, 200, 200)
-        end)
-        button.MouseLeave:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-                stroke.Color = Color3.fromRGB(50, 50, 50)
-        end)
-
-        return button
+    local button = Instance.new("TextButton", scroll)
+    button.Size = UDim2.new(1, 0, 0, 42)
+    button.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+    button.BorderSizePixel = 0
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(240, 240, 240)
+    button.TextSize = 13.5
+    button.Font = Enum.Font.GothamMedium
+    button.ZIndex = 6
+    local stroke = Instance.new("UIStroke", button)
+    stroke.Thickness = 1; stroke.Color = Color3.fromRGB(50, 50, 50)
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+    button.MouseEnter:Connect(function() button.BackgroundColor3 = Color3.fromRGB(40, 40, 40); stroke.Color = Color3.fromRGB(200, 200, 200) end)
+    button.MouseLeave:Connect(function() button.BackgroundColor3 = Color3.fromRGB(22, 22, 22); stroke.Color = Color3.fromRGB(50, 50, 50) end)
+    return button
 end
+DS.createButton = createButton
+--==================================================
+-- DARKSHIELD  |  PARTE 6 DE 8
+--==================================================
 
-local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
-local silentButton = createButton("🔫 Redirigir Balas: OFF")
-local cooldownButton = createButton("⏱️ Sin Enfriamiento: OFF")
-local ammoButton = createButton("🔋 Balas Infinitas: OFF")
-local aimbotButton = createButton("🎯 Aimbot: OFF")
-local espButton = createButton("👁️ ESP Rainbow: OFF")
-local xrayButton = createButton("👻 X-Ray: OFF")
-local noclipButton = createButton("💨 Noclip: OFF")
-local invisibleButton = createButton("🌀 Invisible: OFF")
-local bringButton = createButton("🧲 Traer Enemigos: OFF")
-local npcButton = createButton("🤖 Incluir NPCs: OFF")
-local anchorButton = createButton("🔒 Anclar Traídos: OFF")
+local DS = getgenv().DarkShield
+local createButton = DS.createButton
+local gui = DS.gui
+local C = DS.Config
+local RunService = DS.RunService
 
-local fovCircle = Instance.new("Frame")
+DS.wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
+DS.silentButton = createButton("🔫 Redirigir Balas: OFF")
+DS.cooldownButton = createButton("⏱️ Sin Enfriamiento: OFF")
+DS.ammoButton = createButton("🔋 Balas Infinitas: OFF")
+DS.aimbotButton = createButton("🎯 Aimbot: OFF")
+DS.espButton = createButton("👁️ ESP Rainbow: OFF")
+DS.xrayButton = createButton("👻 X-Ray: OFF")
+DS.noclipButton = createButton("💨 Noclip: OFF")
+DS.invisibleButton = createButton("🌀 Invisible: OFF")
+DS.bringButton = createButton("🧲 Traer Enemigos: OFF")
+DS.npcButton = createButton("🤖 Incluir NPCs: OFF")
+DS.anchorButton = createButton("🔒 Anclar Traídos: OFF")
+
+local fovCircle = Instance.new("Frame", gui)
 fovCircle.Name = "FOVCircle"
 fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
 fovCircle.Position = UDim2.fromScale(0.5, 0.5)
 fovCircle.BackgroundTransparency = 1
 fovCircle.BorderSizePixel = 0
-fovCircle.Active = false
-fovCircle.Selectable = false
 fovCircle.ZIndex = 3
-fovCircle.Parent = gui
-
-local circleCorner = Instance.new("UICorner")
-circleCorner.CornerRadius = UDim.new(1, 0)
-circleCorner.Parent = fovCircle
-
-local circleStroke = Instance.new("UIStroke")
-circleStroke.Thickness = 2
-circleStroke.Color = Color3.fromRGB(255, 255, 255)
-circleStroke.Parent = fovCircle
+Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
+local cStroke = Instance.new("UIStroke", fovCircle)
+cStroke.Thickness = 2; cStroke.Color = Color3.fromRGB(255, 255, 255)
 
 RunService.RenderStepped:Connect(function()
-        if fovCircle then
-                fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-                fovCircle.Position = UDim2.fromScale(0.5, 0.5)
-                fovCircle.Size = UDim2.fromOffset(FOVRadius * 2, FOVRadius * 2)
-        end
+    if fovCircle then
+        fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+        fovCircle.Position = UDim2.fromScale(0.5, 0.5)
+        fovCircle.Size = UDim2.fromOffset(C.FOVRadius * 2, C.FOVRadius * 2)
+    end
 end)
+--==================================================
+-- DARKSHIELD  |  PARTE 7 DE 8
+--==================================================
 
---==============================
--- ESP RAINBOW (SOBREVIVE A LAS RONDAS)
---==============================
+local DS = getgenv().DarkShield
+local C = DS.Config
+local Players, player, RunService = DS.Players, DS.player, DS.RunService
 
-local function removeESP(character)
-        if not character then return end
-        local old = character:FindFirstChild(ESP_NAME)
-        if old then old:Destroy() end
+local function removeESP(char)
+    if char and char:FindFirstChild(C.ESP_NAME) then char[C.ESP_NAME]:Destroy() end
 end
-
-local function addESP(character)
-        if not ESP then return end
-        if not character or character == player.Character then return end
-
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then
-                humanoid = character:WaitForChild("Humanoid", 5)
-        end
-        if not humanoid then return end
-
-        removeESP(character)
-
-        local highlight = Instance.new("Highlight")
-        highlight.Name = ESP_NAME
-        highlight.Adornee = character
-        highlight.Enabled = true
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.FillTransparency = 0.4
-        highlight.OutlineTransparency = 0
-        highlight.Parent = character
-
-        highlight.FillColor = Color3.fromHSV(0, 1, 1)
-        highlight.OutlineColor = Color3.fromHSV(0.5, 1, 1)
+local function addESP(char)
+    if not C.ESP or not char or char == player.Character then return end
+    local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
+    if not hum then return end
+    removeESP(char)
+    local hl = Instance.new("Highlight", char)
+    hl.Name = C.ESP_NAME
+    hl.Adornee = char
+    hl.Enabled = true
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.FillTransparency = 0.4
+    hl.OutlineTransparency = 0
+    hl.FillColor = Color3.fromHSV(0, 1, 1)
+    hl.OutlineColor = Color3.fromHSV(0.5, 1, 1)
 end
-
 RunService.RenderStepped:Connect(function()
-        if not ESP then return end
-        local hue = (tick() * 0.2) % 1
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local highlight = plr.Character:FindFirstChild(ESP_NAME)
-                        if highlight and highlight:IsA("Highlight") then
-                                highlight.FillColor = Color3.fromHSV(hue, 1, 1)
-                                highlight.OutlineColor = Color3.fromHSV((hue + 0.5) % 1, 1, 1)
-                        end
-                end
+    if not C.ESP then return end
+    local hue = (tick() * 0.2) % 1
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            local hl = plr.Character:FindFirstChild(C.ESP_NAME)
+            if hl and hl:IsA("Highlight") then
+                hl.FillColor = Color3.fromHSV(hue, 1, 1)
+                hl.OutlineColor = Color3.fromHSV((hue + 0.5) % 1, 1, 1)
+            end
         end
+    end
 end)
-
-local function updateESP()
-        for _,plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player then
-                        if ESP then
-                                if plr.Character then addESP(plr.Character) end
-                        else
-                                removeESP(plr.Character)
-                        end
-                end
-        end
+local espConns = {}
+local function setupESP(plr)
+    if plr == player or espConns[plr] then return end
+    espConns[plr] = plr.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid", 5); task.wait(0.35)
+        if C.ESP then addESP(char) end
+    end)
+    if C.ESP and plr.Character then addESP(plr.Character) end
 end
-
-local espConnections = {}
-
-local function setupESPPlayer(plr)
-        if plr == player then return end
-        if espConnections[plr] then return end
-
-        espConnections[plr] = plr.CharacterAdded:Connect(function(character)
-                character:WaitForChild("Humanoid", 5)
-                task.wait(0.35)
-                if ESP then
-                        addESP(character)
-                end
-        end)
-
-        if ESP and plr.Character then
-                addESP(plr.Character)
-        end
-end
-
-for _, plr in ipairs(Players:GetPlayers()) do
-        setupESPPlayer(plr)
-end
-
-Players.PlayerAdded:Connect(setupESPPlayer)
-
+for _, plr in ipairs(Players:GetPlayers()) do setupESP(plr) end
+Players.PlayerAdded:Connect(setupESP)
 Players.PlayerRemoving:Connect(function(plr)
-        local conn = espConnections[plr]
-        if conn then
-                conn:Disconnect()
-                espConnections[plr] = nil
-        end
-        removeESP(plr.Character)
+    if espConns[plr] then espConns[plr]:Disconnect(); espConns[plr] = nil end
+    removeESP(plr.Character)
 end)
-
-task.spawn(function()
-        while true do
-                if ESP then
-                        for _, plr in ipairs(Players:GetPlayers()) do
-                                if plr ~= player and plr.Character then
-                                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                                        if hum and hum.Health > 0 and not plr.Character:FindFirstChild(ESP_NAME) then
-                                                addESP(plr.Character)
-                                        end
-                                end
-                        end
-                end
-                task.wait(1)
-        end
-end)
-
---==============================
--- INVISIBILIDAD Y NOCLIP
---==============================
-
-local function setInvisible()
-        if not Invisible then return end
-        local character = player.Character
-        if not character then return end
-
-        for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                        part.Transparency = 1
-                        part.CanCollide = false
-                elseif part:IsA("Accessory") or part:IsA("Hat") then
-                        if part:FindFirstChild("Handle") then part.Handle.Transparency = 1 end
-                elseif part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
-                        part.Transparency = 1
-                end
-        end
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.BreakJointsOnDeath = false end
-end
-
-local function setVisible()
-        local character = player.Character
-        if not character then return end
-
-        for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                        part.Transparency = 0
-                        part.CanCollide = true
-                elseif part:IsA("Accessory") or part:IsA("Hat") then
-                        if part:FindFirstChild("Handle") then part.Handle.Transparency = 0 end
-                elseif part:IsA("Shirt") or part:IsA("Pants") or part:IsA("ShirtGraphic") then
-                        part.Transparency = 0
-                end
-        end
-end
 
 RunService.RenderStepped:Connect(function()
-        if Invisible then setInvisible() end
+    if not C.Invisible then return end
+    local char = player.Character
+    if not char then return end
+    for _, p in ipairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then p.Transparency = 1; p.CanCollide = false
+        elseif (p:IsA("Accessory") or p:IsA("Hat")) and p:FindFirstChild("Handle") then p.Handle.Transparency = 1
+        elseif p:IsA("Shirt") or p:IsA("Pants") or p:IsA("ShirtGraphic") then p.Transparency = 1 end
+    end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.BreakJointsOnDeath = false end
 end)
 
 RunService.Stepped:Connect(function()
-        if not Noclip then return end
-        local character = player.Character
-        if not character then return end
-        for _,part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-        end
+    if not C.Noclip then return end
+    local char = player.Character
+    if not char then return end
+    for _, p in ipairs(char:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end
 end)
---==================================================
--- DARKSHIELD  |  PARTE 4 DE 4
---==================================================
-
---==============================
--- AIMBOT
---==============================
 
 local function getClosestHead()
-        camera = workspace.CurrentCamera
-        if not camera then return nil end
-
-        local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
-        local closest = nil
-        local closestDistance = FOVRadius
-
-        for _,plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player then
-                        local character = plr.Character
-                        if character then
-                                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                                local head = character:FindFirstChild("Head")
-                                if humanoid and head and humanoid.Health > 0 then
-                                        local pos, visible = camera:WorldToViewportPoint(head.Position)
-                                        if visible and pos.Z > 0 then
-                                                local distance = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                                                if distance < closestDistance then
-                                                        closestDistance = distance
-                                                        closest = head
-                                                end
-                                        end
-                                end
-                        end
+    local cam = workspace.CurrentCamera
+    if not cam then return nil end
+    local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+    local closest, bestDist = nil, C.FOVRadius
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            local hum, head = plr.Character:FindFirstChildOfClass("Humanoid"), plr.Character:FindFirstChild("Head")
+            if hum and head and hum.Health > 0 then
+                local pos, vis = cam:WorldToViewportPoint(head.Position)
+                if vis and pos.Z > 0 then
+                    local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                    if d < bestDist then bestDist = d; closest = head end
                 end
+            end
         end
-        return closest
+    end
+    return closest
 end
-
 RunService.RenderStepped:Connect(function()
-        if not Aimbot then return end
-        camera = workspace.CurrentCamera
-        if not camera then return end
-
-        local head = getClosestHead()
-        if head then
-                camera.CFrame = CFrame.lookAt(camera.CFrame.Position, head.Position)
-        end
+    if not C.Aimbot then return end
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    local head = getClosestHead()
+    if head then cam.CFrame = CFrame.lookAt(cam.CFrame.Position, head.Position) end
 end)
-
---==============================
--- X-RAY
---==============================
 
 local xrayParts = {}
-local function enableXRay()
-        for _,object in ipairs(workspace:GetDescendants()) do
-                if object:IsA("BasePart") then
-                        local character = player.Character
-                        if not character or not object:IsDescendantOf(character) then
-                                if xrayParts[object] == nil then
-                                        xrayParts[object] = object.LocalTransparencyModifier
-                                end
-                                object.LocalTransparencyModifier = 0.65
-                        end
-                end
+DS.enableXRay = function()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local char = player.Character
+            if not char or not obj:IsDescendantOf(char) then
+                if xrayParts[obj] == nil then xrayParts[obj] = obj.LocalTransparencyModifier end
+                obj.LocalTransparencyModifier = 0.65
+            end
         end
+    end
 end
-
-local function disableXRay()
-        for object,value in pairs(xrayParts) do
-                if object and object.Parent then
-                        object.LocalTransparencyModifier = value
-                end
-        end
-        table.clear(xrayParts)
+DS.disableXRay = function()
+    for obj, val in pairs(xrayParts) do if obj and obj.Parent then obj.LocalTransparencyModifier = val end end
+    table.clear(xrayParts)
 end
+--==================================================
+-- DARKSHIELD  |  PARTE 8 DE 8
+--==================================================
 
---==============================
--- SIN ENFRIAMIENTO / BALAS INFINITAS
---==============================
+local DS = getgenv().DarkShield
+local C = DS.Config
+local Players, player = DS.Players, DS.player
+local gui, main = DS.gui, DS.main
+local INCLUDE, EXCLUDE = DS.INCLUDE, DS.EXCLUDE
 
-local ABILITY_WORDS = {
-        "skill", "ability", "cast", "spell", "use", "attack",
-        "dash", "blink", "punch", "throw", "heal", "summon", "ultimate"
-}
-
-local AMMO_WORDS = {
-        "ammo", "ammunition", "balas", "municion", "mag",
-        "clip", "rounds", "bullets", "charges", "cargas", "bulletsleft"
-}
+local ABILITY_WORDS = {"skill", "ability", "cast", "spell", "use", "attack", "dash", "blink", "punch", "throw", "heal", "summon", "ultimate"}
+local AMMO_WORDS = {"ammo", "ammunition", "balas", "municion", "mag", "clip", "rounds", "bullets", "charges", "cargas", "bulletsleft"}
 
 local function matchWords(name, words)
-        local n = string.lower(name)
-        for _, w in ipairs(words) do
-                if string.find(n, w, 1, true) then
-                        return true
-                end
-        end
-        return false
+    local n = string.lower(name)
+    for _, w in ipairs(words) do if string.find(n, w, 1, true) then return true end end
+    return false
 end
-
-local lastRemote = {}
 
 local function fillAmmo()
-        local roots = { player.PlayerGui, player.Backpack, player.Character }
-
-        for _, root in ipairs(roots) do
-                if root then
-                        for _, obj in ipairs(root:GetDescendants()) do
-                                if obj:IsA("ValueBase") and matchWords(obj.Name, AMMO_WORDS) then
-                                        if obj:IsA("IntValue") or obj:IsA("NumberValue") then
-                                                if obj.Value < AMMO_VALUE - 50 then
-                                                        obj.Value = AMMO_VALUE
-                                                end
-                                        elseif obj:IsA("StringValue") then
-                                                local num = tonumber(obj.Value)
-                                                if num and num < AMMO_VALUE - 50 then
-                                                        obj.Value = tostring(AMMO_VALUE)
-                                                end
-                                        end
-                                end
-                        end
+    local roots = { player.PlayerGui, player.Backpack, player.Character }
+    for _, r in ipairs(roots) do
+        if r then
+            for _, obj in ipairs(r:GetDescendants()) do
+                if obj:IsA("ValueBase") and matchWords(obj.Name, AMMO_WORDS) then
+                    if obj:IsA("IntValue") or obj:IsA("NumberValue") then
+                        if obj.Value < C.AMMO_VALUE - 50 then obj.Value = C.AMMO_VALUE end
+                    elseif obj:IsA("StringValue") then
+                        local num = tonumber(obj.Value)
+                        if num and num < C.AMMO_VALUE - 50 then obj.Value = tostring(C.AMMO_VALUE) end
+                    end
                 end
+            end
         end
-
-        local character = player.Character
-        local tool = character and character:FindFirstChildOfClass("Tool")
-        if tool then
-                for attr, value in pairs(tool:GetAttributes()) do
-                        if type(value) == "number" and matchWords(attr, AMMO_WORDS) and value < AMMO_VALUE - 50 then
-                                pcall(function()
-                                        tool:SetAttribute(attr, AMMO_VALUE)
-                                end)
-                        end
-                end
+    end
+    local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+    if tool then
+        for attr, val in pairs(tool:GetAttributes()) do
+            if type(val) == "number" and matchWords(attr, AMMO_WORDS) and val < C.AMMO_VALUE - 50 then
+                pcall(function() tool:SetAttribute(attr, C.AMMO_VALUE) end)
+            end
         end
+    end
 end
-
 task.spawn(function()
-        while true do
-                if InfiniteAmmo then
-                        pcall(fillAmmo)
-                        task.wait(0.25)
-                else
-                        task.wait(0.2)
-                end
-        end
+    while true do if C.InfiniteAmmo then pcall(fillAmmo); task.wait(0.25) else task.wait(0.2) end end
 end)
 
---==============================
--- WALLBANG / SILENT AIM
---==============================
-
-local redirected = 0
-local hooked = false
 local charCache = {}
-
-local function refreshChars()
+task.spawn(function()
+    while true do
         local list = {}
         for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 then
-                                table.insert(list, plr.Character)
-                        end
-                end
+            if plr ~= player and plr.Character then
+                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then table.insert(list, plr.Character) end
+            end
         end
         charCache = list
-end
-
-task.spawn(function()
-        while true do
-                refreshChars()
-                task.wait(0.5)
-        end
+        task.wait(0.5)
+    end
 end)
 
 local function closestHeadSilent()
-        local cam = workspace.CurrentCamera
-        if not cam then return nil end
-
-        local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
-        local best, bestDist = nil, math.huge
-
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        local head = plr.Character:FindFirstChild("Head")
-                        if hum and head and hum.Health > 0 then
-                                local pos, vis = cam:WorldToViewportPoint(head.Position)
-                                if vis and pos.Z > 0 then
-                                        local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                                        if d < bestDist then
-                                                bestDist = d
-                                                best = head
-                                        end
-                                end
-                        end
+    local cam = workspace.CurrentCamera
+    if not cam then return nil end
+    local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+    local best, bestDist = nil, math.huge
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            local hum, head = plr.Character:FindFirstChildOfClass("Humanoid"), plr.Character:FindFirstChild("Head")
+            if hum and head and hum.Health > 0 then
+                local pos, vis = cam:WorldToViewportPoint(head.Position)
+                if vis and pos.Z > 0 then
+                    local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                    if d < bestDist then bestDist = d; best = head end
                 end
+            end
         end
-        return best
+    end
+    return best
 end
 
-local function params(filterType, list)
-        local p = RaycastParams.new()
-        p.FilterType = filterType
-        p.FilterDescendantsInstances = list
-        p.IgnoreWater = true
-        return p
+local function params(ft, list)
+    local p = RaycastParams.new()
+    p.FilterType = ft; p.FilterDescendantsInstances = list; p.IgnoreWater = true
+    return p
 end
 
 local function wallbangCast(origin, direction)
-        if direction.Magnitude < 0.1 then return nil end
-
-        local unit = direction.Unit
-        local chars = charCache
-        if #chars == 0 then return nil end
-
-        local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
-        if not hit or not hit.Instance then return nil end
-
-        local travel = (hit.Position - origin).Magnitude
-        if travel <= 0.1 then return hit end
-
-        local world = params(EXCLUDE, chars)
-        local cursor = origin
-        local used = 0
-
-        for _ = 1, MAX_WALLS do
-                local remaining = travel - used
-                if remaining <= 0.05 then break end
-
-                local wall = workspace:Raycast(cursor, unit * remaining, world)
-                if not wall then break end
-
-                local probeList = table.clone(chars)
-                table.insert(probeList, wall.Instance)
-                local probe = workspace:Raycast(
-                        wall.Position + unit * 0.02,
-                        unit * (MAX_WALL + 1),
-                        params(EXCLUDE, probeList)
-                )
-
-                if not probe then return nil end
-
-                local thickness = (probe.Position - wall.Position).Magnitude
-                if thickness > MAX_WALL then return nil end
-
-                cursor = probe.Position + unit * 0.02
-                used = (cursor - origin).Magnitude
-        end
-
-        return hit
+    if direction.Magnitude < 0.1 then return nil end
+    local unit = direction.Unit
+    local chars = charCache
+    if #chars == 0 then return nil end
+    local hit = workspace:Raycast(origin, direction, params(INCLUDE, chars))
+    if not hit or not hit.Instance then return nil end
+    local travel = (hit.Position - origin).Magnitude
+    if travel <= 0.1 then return hit end
+    local world = params(EXCLUDE, chars)
+    local cursor, used = origin, 0
+    for _ = 1, C.MAX_WALLS do
+        local rem = travel - used
+        if rem <= 0.05 then break end
+        local wall = workspace:Raycast(cursor, unit * rem, world)
+        if not wall then break end
+        local probeList = table.clone(chars)
+        table.insert(probeList, wall.Instance)
+        local probe = workspace:Raycast(wall.Position + unit * 0.02, unit * (C.MAX_WALL + 1), params(EXCLUDE, probeList))
+        if not probe or (probe.Position - wall.Position).Magnitude > C.MAX_WALL then return nil end
+        cursor = probe.Position + unit * 0.02
+        used = (cursor - origin).Magnitude
+    end
+    return hit
 end
 
-local guard = false
-local original
-local lastWallbang = 0
-
+local guard, original, lastWallbang, lastRemote = false, nil, 0, {}
 local function install()
-        if original then return end
-        if not hookmetamethod then return end
-
-        local ok, fn = pcall(hookmetamethod, game, "__namecall", function(self, ...)
-                local method = getnamecallmethod()
-
-                if NoCooldown and method == "FireServer" and typeof(self) == "Instance" then
-                        if self:IsA("RemoteEvent") and matchWords(self.Name, ABILITY_WORDS) then
-                                local now = os.clock()
-                                if now - (lastRemote[self.Name] or 0) > CD_REMOTE_DELAY then
-                                        lastRemote[self.Name] = now
-
-                                        local args = { ... }
-                                        task.spawn(function()
-                                                for _ = 1, CD_REPEAT do
-                                                        task.wait(0.03)
-                                                        pcall(function()
-                                                                self:FireServer(table.unpack(args, 1, #args))
-                                                        end)
-                                                end
-                                        end)
-                                end
-                        end
-                end
-
-                if guard then
-                        return original(self, ...)
-                end
-
-                if SilentAim and self == workspace.CurrentCamera then
-                        if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                                local head = closestHeadSilent()
-                                if head then
-                                        local origin = workspace.CurrentCamera.CFrame.Position
-                                        redirected = redirected + 1
-                                        return Ray.new(origin, (head.Position - origin).Unit * 2000)
-                                end
-                        end
-                end
-
-                if Wallbang and self == workspace then
-                        local args = { ... }
-                        local origin = nil
-                        local direction = nil
-                        local legacy = false
-
-                        if method == "Raycast" then
-                                origin = args[1]
-                                direction = args[2]
-                        elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
-                                local ray = args[1]
-                                if typeof(ray) == "Ray" then
-                                        origin = ray.Origin
-                                        direction = ray.Direction
-                                        legacy = true
-                                end
-                        end
-
-                        if origin and direction
-                                and typeof(origin) == "Vector3"
-                                and typeof(direction) == "Vector3"
-                                and direction.Magnitude >= MIN_BULLET_LEN then
-
-                                local now = os.clock()
-                                if now - lastWallbang >= WALL_COOLDOWN then
-                                        lastWallbang = now
-
-                                        guard = true
-                                        local okCast, hit = pcall(wallbangCast, origin, direction)
-                                        guard = false
-
-                                        if okCast and hit then
-                                                redirected = redirected + 1
-                                                if legacy then
-                                                        return hit.Instance, hit.Position, hit.Normal, hit.Material
-                                                end
-                                                return hit
-                                        end
-                                end
-                        end
-                end
-
-                return original(self, ...)
-        end)
-
-        if ok then
-                original = fn
-                hooked = true
+    if original or not hookmetamethod then return end
+    local ok, fn = pcall(hookmetamethod, game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if C.NoCooldown and method == "FireServer" and typeof(self) == "Instance" and self:IsA("RemoteEvent") and matchWords(self.Name, ABILITY_WORDS) then
+            local now = os.clock()
+            if now - (lastRemote[self.Name] or 0) > C.CD_REMOTE_DELAY then
+                lastRemote[self.Name] = now
+                local args = { ... }
+                task.spawn(function()
+                    for _ = 1, C.CD_REPEAT do task.wait(0.03); pcall(function() self:FireServer(table.unpack(args, 1, #args)) end) end
+                end)
+            end
         end
+        if guard then return original(self, ...) end
+        if C.SilentAim and self == workspace.CurrentCamera and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
+            local head = closestHeadSilent()
+            if head then return Ray.new(workspace.CurrentCamera.CFrame.Position, (head.Position - workspace.CurrentCamera.CFrame.Position).Unit * 2000) end
+        end
+        if C.Wallbang and self == workspace then
+            local args = { ... }
+            local origin, direction, legacy = nil, nil, false
+            if method == "Raycast" then origin = args[1]; direction = args[2]
+            elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
+                local ray = args[1]
+                if typeof(ray) == "Ray" then origin = ray.Origin; direction = ray.Direction; legacy = true end
+            end
+            if origin and direction and typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude >= C.MIN_BULLET_LEN then
+                local now = os.clock()
+                if now - lastWallbang >= C.WALL_COOLDOWN then
+                    lastWallbang = now
+                    guard = true
+                    local okCast, hit = pcall(wallbangCast, origin, direction)
+                    guard = false
+                    if okCast and hit then
+                        if legacy then return hit.Instance, hit.Position, hit.Normal, hit.Material end
+                        return hit
+                    end
+                end
+            end
+        end
+        return original(self, ...)
+    end)
+    if ok then original = fn end
 end
-
 install()
 
---==============================
--- NPCs / TRAER ENEMIGOS
---==============================
-
 local npcCache = {}
-local function scanNPCs()
-        local found = {}
-        local function scan(container, depth)
+task.spawn(function()
+    while true do
+        if C.BringNPCs then
+            local found = {}
+            local function scan(container, depth)
                 if depth > 2 then return end
                 for _, obj in ipairs(container:GetChildren()) do
-                        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-                                if not Players:GetPlayerFromCharacter(obj) and obj ~= player.Character then
-                                        local hum = obj:FindFirstChildOfClass("Humanoid")
-                                        if hum and hum.Health > 0 then table.insert(found, obj) end
-                                end
-                        elseif obj:IsA("Folder") or obj:IsA("Model") then
-                                scan(obj, depth + 1)
+                    if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+                        if not Players:GetPlayerFromCharacter(obj) and obj ~= player.Character then
+                            local hum = obj:FindFirstChildOfClass("Humanoid")
+                            if hum and hum.Health > 0 then table.insert(found, obj) end
                         end
+                    elseif obj:IsA("Folder") or obj:IsA("Model") then scan(obj, depth + 1) end
                 end
+            end
+            pcall(function() scan(workspace, 0) end)
+            npcCache = found
         end
-        scan(workspace, 0)
-        return found
-end
-
-task.spawn(function()
-        while true do
-                if BringNPCs then npcCache = scanNPCs() end
-                task.wait(1)
-        end
+        task.wait(1)
+    end
 end)
 
-local function collectTargets()
-        local targets = {}
-        for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                        local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                        if hum and hrp and hum.Health > 0 then
-                                table.insert(targets, plr.Character)
-                        end
+task.spawn(function()
+    while true do
+        if C.BringAll then
+            local char = player.Character
+            local myHRP = char and char:FindFirstChild("HumanoidRootPart")
+            if myHRP then
+                local origin, look, right = myHRP.Position, myHRP.CFrame.LookVector, myHRP.CFrame.RightVector
+                local basePos = origin + look * C.BRING_OFFSET
+                local placed, targets = 0, {}
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= player and plr.Character then
+                        local hum, hrp = plr.Character:FindFirstChildOfClass("Humanoid"), plr.Character:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.Health > 0 then table.insert(targets, plr.Character) end
+                    end
                 end
-        end
-
-        if BringNPCs then
-                for _, npc in ipairs(npcCache) do
-                        if npc.Parent and (npc.PrimaryPart or npc:FindFirstChild("HumanoidRootPart")) then
-                                table.insert(targets, npc)
-                        end
-                end
-        end
-        return targets
-end
-
-local function bringTargets()
-        local character = player.Character
-        if not character then return end
-        local myHRP = character:FindFirstChild("HumanoidRootPart")
-        if not myHRP then return end
-
-        local origin = myHRP.Position
-        local look = myHRP.CFrame.LookVector
-        local right = myHRP.CFrame.RightVector
-        local basePos = origin + look * BRING_OFFSET
-        local placed = 0
-
-        for _, target in ipairs(collectTargets()) do
-                local hrp = target.PrimaryPart or target:FindFirstChild("HumanoidRootPart")
-                if hrp and (hrp.Position - origin).Magnitude <= BRING_DISTANCE then
-                        local col = (placed % 3) - 1
-                        local row = math.floor(placed / 3)
-
-                        local pos = basePos + right * (col * BRING_SPACING) - look * (row * BRING_SPACING)
-                        pos = Vector3.new(pos.X, origin.Y + 2, pos.Z)
-
-                        target:PivotTo(CFrame.lookAt(pos, Vector3.new(origin.X, pos.Y, origin.Z)))
-                        hrp.Anchored = AnchorBring
+                for _, target in ipairs(targets) do
+                    local hrp = target.PrimaryPart or target:FindFirstChild("HumanoidRootPart")
+                    if hrp and (hrp.Position - origin).Magnitude <= C.BRING_DISTANCE then
+                        local col, row = (placed % 3) - 1, math.floor(placed / 3)
+                        local pos = basePos + right * (col * C.BRING_SPACING) - look * (row * C.BRING_SPACING)
+                        target:PivotTo(CFrame.lookAt(Vector3.new(pos.X, origin.Y + 2, pos.Z), Vector3.new(origin.X, origin.Y + 2, origin.Z)))
+                        hrp.Anchored = C.AnchorBring
                         placed = placed + 1
+                    end
                 end
+            end
+            task.wait(0.2)
+        else
+            task.wait(0.1)
         end
-end
+    end
+end)
 
-task.spawn(function()
-        while true do
-                if BringAll then
-                        bringTargets()
-                        task.wait(0.2)
-                else
-                        task.wait(0.1)
-                end
+DS.espButton.Activated:Connect(function() C.ESP = not C.ESP; DS.espButton.Text = C.ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF" end)
+DS.aimbotButton.Activated:Connect(function() C.Aimbot = not C.Aimbot; DS.aimbotButton.Text = C.Aimbot and "🎯 Aimbot: ON" or "🎯 Aimbot: OFF" end)
+DS.noclipButton.Activated:Connect(function() C.Noclip = not C.Noclip; DS.noclipButton.Text = C.Noclip and "💨 Noclip: ON" or "💨 Noclip: OFF" end)
+DS.invisibleButton.Activated:Connect(function()
+    C.Invisible = not C.Invisible
+    DS.invisibleButton.Text = C.Invisible and "🌀 Invisible: ON" or "🌀 Invisible: OFF"
+    if not C.Invisible and player.Character then
+        for _, p in ipairs(player.Character:GetDescendants()) do if p:IsA("BasePart") then p.Transparency = 0; p.CanCollide = true end end
+    end
+end)
+DS.xrayButton.Activated:Connect(function() C.XRay = not C.XRay; DS.xrayButton.Text = C.XRay and "👻 X-Ray: ON" or "👻 X-Ray: OFF"; if C.XRay then DS.enableXRay() else DS.disableXRay() end end)
+DS.wallbangButton.Activated:Connect(function() C.Wallbang = not C.Wallbang; DS.wallbangButton.Text = C.Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"; install() end)
+DS.silentButton.Activated:Connect(function() C.SilentAim = not C.SilentAim; DS.silentButton.Text = C.SilentAim and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"; install() end)
+DS.cooldownButton.Activated:Connect(function() C.NoCooldown = not C.NoCooldown; DS.cooldownButton.Text = C.NoCooldown and "⏱️ Sin Enfriamiento: ON" or "⏱️ Sin Enfriamiento: OFF"; install() end)
+DS.ammoButton.Activated:Connect(function() C.InfiniteAmmo = not C.InfiniteAmmo; DS.ammoButton.Text = C.InfiniteAmmo and "🔋 Balas Infinitas: ON" or "🔋 Balas Infinitas: OFF"; if C.InfiniteAmmo then pcall(fillAmmo) end end)
+DS.bringButton.Activated:Connect(function()
+    C.BringAll = not C.BringAll
+    DS.bringButton.Text = C.BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"
+    if not C.BringAll and C.AnchorBring then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character then
+                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then hrp.Anchored = false end
+            end
         end
+    end
 end)
-
---==============================
--- BOTONES
---==============================
-
-espButton.Activated:Connect(function()
-        ESP = not ESP
-        espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
-
-        if ESP then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                        setupESPPlayer(plr)
-                end
+DS.npcButton.Activated:Connect(function() C.BringNPCs = not C.BringNPCs; DS.npcButton.Text = C.BringNPCs and "🤖 Incluir NPCs: ON" or "🤖 Incluir NPCs: OFF" end)
+DS.anchorButton.Activated:Connect(function()
+    C.AnchorBring = not C.AnchorBring
+    DS.anchorButton.Text = C.AnchorBring and "🔒 Anclar Traídos: ON" or "🔒 Anclar Traídos: OFF"
+    if not C.AnchorBring then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character then
+                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then hrp.Anchored = false end
+            end
         end
-
-        updateESP()
+    end
 end)
 
-aimbotButton.Activated:Connect(function()
-        Aimbot = not Aimbot
-        aimbotButton.Text = Aimbot and "🎯 Aimbot: ON" or "🎯 Aimbot: OFF"
-end)
+local openButton = Instance.new("TextButton", gui)
+openButton.Size = UDim2.fromOffset(48, 48)
+openButton.Position = UDim2.new(1, -58, 0.5, -24)
+openButton.Text = "🛡️"; openButton.TextSize = 22; openButton.Font = Enum.Font.GothamBold
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255); openButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+openButton.Visible = false; openButton.ZIndex = 12
+Instance.new("UICorner", openButton).CornerRadius = UDim.new(1, 0)
+local oStroke = Instance.new("UIStroke", openButton)
+oStroke.Thickness = 1.5; oStroke.Color = Color3.fromRGB(150, 150, 150)
 
-noclipButton.Activated:Connect(function()
-        Noclip = not Noclip
-        noclipButton.Text = Noclip and "💨 Noclip: ON" or "💨 Noclip: OFF"
-end)
+local openWasDragged = DS.makeDraggable(openButton, openButton)
+DS.closeButton.Activated:Connect(function() main.Visible = false; openButton.Visible = true end)
+openButton.Activated:Connect(function() if openWasDragged() then return end; main.Visible = true; openButton.Visible = false end)
 
-invisibleButton.Activated:Connect(function()
-        Invisible = not Invisible
-        invisibleButton.Text = Invisible and "🌀 Invisible: ON" or "🌀 Invisible: OFF"
-        if not Invisible then setVisible() end
-end)
-
-xrayButton.Activated:Connect(function()
-        XRay = not XRay
-        xrayButton.Text = XRay and "👻 X-Ray: ON" or "👻 X-Ray: OFF"
-        if XRay then enableXRay() else disableXRay() end
-end)
-
-wallbangButton.Activated:Connect(function()
-        Wallbang = not Wallbang
-        wallbangButton.Text = Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"
-        install()
-end)
-
-silentButton.Activated:Connect(function()
-        SilentAim = not SilentAim
-        silentButton.Text = SilentAim and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"
-        install()
-end)
-
-cooldownButton.Activated:Connect(function()
-        NoCooldown = not NoCooldown
-        cooldownButton.Text = NoCooldown and "⏱️ Sin Enfriamiento: ON" or "⏱️ Sin Enfriamiento: OFF"
-        install()
-end)
-
-ammoButton.Activated:Connect(function()
-        InfiniteAmmo = not InfiniteAmmo
-        ammoButton.Text = InfiniteAmmo and "🔋 Balas Infinitas: ON" or "🔋 Balas Infinitas: OFF"
-        if InfiniteAmmo then pcall(fillAmmo) end
-end)
-
-bringButton.Activated:Connect(function()
-        BringAll = not BringAll
-        bringButton.Text = BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"
-        if BringAll then
-                bringTargets()
-        elseif AnchorBring then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                        if plr ~= player and plr.Character then
-                                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                                if hrp then hrp.Anchored = false end
-                        end
-                end
-        end
-end)
-
-npcButton.Activated:Connect(function()
-        BringNPCs = not BringNPCs
-        npcButton.Text = BringNPCs and "🤖 Incluir NPCs: ON" or "🤖 Incluir NPCs: OFF"
-        npcCache = scanNPCs()
-end)
-
-anchorButton.Activated:Connect(function()
-        AnchorBring = not AnchorBring
-        anchorButton.Text = AnchorBring and "🔒 Anclar Traídos: ON" or "🔒 Anclar Traídos: OF
+print("DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente en 8 partes")

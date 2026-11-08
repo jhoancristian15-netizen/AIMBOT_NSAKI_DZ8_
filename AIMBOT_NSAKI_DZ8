@@ -1,5 +1,5 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 8
+-- DARKSHIELD  |  PARTE 1 DE 8 (SIN COOLDOWN / AMMO)
 --==================================================
 
 local _env = getgenv()
@@ -9,12 +9,10 @@ if not _env.DarkShield then
             ESP = false, Aimbot = false, XRay = false, Noclip = false,
             Invisible = false, BringAll = false, BringNPCs = false,
             AnchorBring = false, Wallbang = false, SilentAim = false,
-            NoCooldown = false, InfiniteAmmo = false,
             FOV_MIN = 50, FOV_MAX = 300, FOVRadius = 150,
             BRING_DISTANCE = 500, BRING_SPACING = 3.2, BRING_OFFSET = 8,
             MAX_WALL = 6, MAX_WALLS = 2, MIN_BULLET_LEN = 30,
-            WALL_COOLDOWN = 0.006, CD_REPEAT = 2, CD_REMOTE_DELAY = 0.16,
-            AMMO_VALUE = 999, ESP_NAME = "DARKSHIELD_ESP"
+            WALL_COOLDOWN = 0.006, ESP_NAME = "DARKSHIELD_ESP"
         }
     }
 end
@@ -330,8 +328,6 @@ local RunService = DS.RunService
 
 DS.wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
 DS.silentButton = createButton("🔫 Redirigir Balas: OFF")
-DS.cooldownButton = createButton("⏱️ Sin Enfriamiento: OFF")
-DS.ammoButton = createButton("🔋 Balas Infinitas: OFF")
 DS.aimbotButton = createButton("🎯 Aimbot: OFF")
 DS.espButton = createButton("👁️ ESP Rainbow: OFF")
 DS.xrayButton = createButton("👻 X-Ray: OFF")
@@ -487,44 +483,6 @@ local Players, player = DS.Players, DS.player
 local gui, main = DS.gui, DS.main
 local INCLUDE, EXCLUDE = DS.INCLUDE, DS.EXCLUDE
 
-local ABILITY_WORDS = {"skill", "ability", "cast", "spell", "use", "attack", "dash", "blink", "punch", "throw", "heal", "summon", "ultimate"}
-local AMMO_WORDS = {"ammo", "ammunition", "balas", "municion", "mag", "clip", "rounds", "bullets", "charges", "cargas", "bulletsleft"}
-
-local function matchWords(name, words)
-    local n = string.lower(name)
-    for _, w in ipairs(words) do if string.find(n, w, 1, true) then return true end end
-    return false
-end
-
-local function fillAmmo()
-    local roots = { player.PlayerGui, player.Backpack, player.Character }
-    for _, r in ipairs(roots) do
-        if r then
-            for _, obj in ipairs(r:GetDescendants()) do
-                if obj:IsA("ValueBase") and matchWords(obj.Name, AMMO_WORDS) then
-                    if obj:IsA("IntValue") or obj:IsA("NumberValue") then
-                        if obj.Value < C.AMMO_VALUE - 50 then obj.Value = C.AMMO_VALUE end
-                    elseif obj:IsA("StringValue") then
-                        local num = tonumber(obj.Value)
-                        if num and num < C.AMMO_VALUE - 50 then obj.Value = tostring(C.AMMO_VALUE) end
-                    end
-                end
-            end
-        end
-    end
-    local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
-    if tool then
-        for attr, val in pairs(tool:GetAttributes()) do
-            if type(val) == "number" and matchWords(attr, AMMO_WORDS) and val < C.AMMO_VALUE - 50 then
-                pcall(function() tool:SetAttribute(attr, C.AMMO_VALUE) end)
-            end
-        end
-    end
-end
-task.spawn(function()
-    while true do if C.InfiniteAmmo then pcall(fillAmmo); task.wait(0.25) else task.wait(0.2) end end
-end)
-
 local charCache = {}
 task.spawn(function()
     while true do
@@ -592,21 +550,11 @@ local function wallbangCast(origin, direction)
     return hit
 end
 
-local guard, original, lastWallbang, lastRemote = false, nil, 0, {}
+local guard, original, lastWallbang = false, nil, 0
 local function install()
     if original or not hookmetamethod then return end
     local ok, fn = pcall(hookmetamethod, game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
-        if C.NoCooldown and method == "FireServer" and typeof(self) == "Instance" and self:IsA("RemoteEvent") and matchWords(self.Name, ABILITY_WORDS) then
-            local now = os.clock()
-            if now - (lastRemote[self.Name] or 0) > C.CD_REMOTE_DELAY then
-                lastRemote[self.Name] = now
-                local args = { ... }
-                task.spawn(function()
-                    for _ = 1, C.CD_REPEAT do task.wait(0.03); pcall(function() self:FireServer(table.unpack(args, 1, #args)) end) end
-                end)
-            end
-        end
         if guard then return original(self, ...) end
         if C.SilentAim and self == workspace.CurrentCamera and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
             local head = closestHeadSilent()
@@ -709,8 +657,6 @@ end)
 DS.xrayButton.Activated:Connect(function() C.XRay = not C.XRay; DS.xrayButton.Text = C.XRay and "👻 X-Ray: ON" or "👻 X-Ray: OFF"; if C.XRay then DS.enableXRay() else DS.disableXRay() end end)
 DS.wallbangButton.Activated:Connect(function() C.Wallbang = not C.Wallbang; DS.wallbangButton.Text = C.Wallbang and "🧱 Traspasar Paredes: ON" or "🧱 Traspasar Paredes: OFF"; install() end)
 DS.silentButton.Activated:Connect(function() C.SilentAim = not C.SilentAim; DS.silentButton.Text = C.SilentAim and "🔫 Redirigir Balas: ON" or "🔫 Redirigir Balas: OFF"; install() end)
-DS.cooldownButton.Activated:Connect(function() C.NoCooldown = not C.NoCooldown; DS.cooldownButton.Text = C.NoCooldown and "⏱️ Sin Enfriamiento: ON" or "⏱️ Sin Enfriamiento: OFF"; install() end)
-DS.ammoButton.Activated:Connect(function() C.InfiniteAmmo = not C.InfiniteAmmo; DS.ammoButton.Text = C.InfiniteAmmo and "🔋 Balas Infinitas: ON" or "🔋 Balas Infinitas: OFF"; if C.InfiniteAmmo then pcall(fillAmmo) end end)
 DS.bringButton.Activated:Connect(function()
     C.BringAll = not C.BringAll
     DS.bringButton.Text = C.BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"

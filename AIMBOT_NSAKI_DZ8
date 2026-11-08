@@ -1,5 +1,5 @@
 --==================================================
--- DARKSHIELD  |  PARTE 1 DE 3
+-- DARKSHIELD  |  PARTE 1 DE 4
 -- LocalScript | StarterPlayer > StarterPlayerScripts
 --==================================================
 
@@ -25,6 +25,8 @@ local BringNPCs = false
 local AnchorBring = false
 local Wallbang = false
 local SilentAim = false
+local NoCooldown = false
+local InfiniteAmmo = false
 
 local FOV_MIN = 50
 local FOV_MAX = 300
@@ -39,6 +41,9 @@ local MAX_WALLS = 2
 local MIN_BULLET_LEN = 30
 local WALL_COOLDOWN = 0.006
 
+local CD_REPEAT = 2
+local CD_REMOTE_DELAY = 0.16
+local AMMO_VALUE = 999
 local ESP_NAME = "DARKSHIELD_ESP"
 
 local INCLUDE, EXCLUDE
@@ -252,6 +257,9 @@ task.delay(2.2, function()
                 splash:Destroy()
         end)
 end)
+--==================================================
+-- DARKSHIELD  |  PARTE 2 DE 4
+--==================================================
 
 --==============================
 -- ZONA DESPLAZABLE
@@ -340,7 +348,10 @@ RunService.RenderStepped:Connect(function()
         end
 end)
 
--- EL FOV VA PRIMERO
+--==============================
+-- SLIDER DE FOV
+--==============================
+
 local function createSlider(labelText, min, max, initial, onChange)
         local holder = Instance.new("Frame")
         holder.Size = UDim2.new(1, 0, 0, 50)
@@ -442,7 +453,7 @@ createSlider("🎯 FOV Aimbot: ", FOV_MIN, FOV_MAX, FOVRadius, function(value)
         FOVRadius = value
 end)
 --==================================================
--- DARKSHIELD  |  PARTE 2 DE 3
+-- DARKSHIELD  |  PARTE 3 DE 4
 --==================================================
 
 local function createButton(text)
@@ -479,6 +490,10 @@ local function createButton(text)
         return button
 end
 
+local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
+local silentButton = createButton("🔫 Redirigir Balas: OFF")
+local cooldownButton = createButton("⏱️ Sin Enfriamiento: OFF")
+local ammoButton = createButton("🔋 Balas Infinitas: OFF")
 local aimbotButton = createButton("🎯 Aimbot: OFF")
 local espButton = createButton("👁️ ESP Rainbow: OFF")
 local xrayButton = createButton("👻 X-Ray: OFF")
@@ -487,8 +502,6 @@ local invisibleButton = createButton("🌀 Invisible: OFF")
 local bringButton = createButton("🧲 Traer Enemigos: OFF")
 local npcButton = createButton("🤖 Incluir NPCs: OFF")
 local anchorButton = createButton("🔒 Anclar Traídos: OFF")
-local wallbangButton = createButton("🧱 Traspasar Paredes: OFF")
-local silentButton = createButton("🔫 Redirigir Balas: OFF")
 
 local fovCircle = Instance.new("Frame")
 fovCircle.Name = "FOVCircle"
@@ -629,7 +642,10 @@ task.spawn(function()
         end
 end)
 
--- Invisibilidad y Noclip
+--==============================
+-- INVISIBILIDAD Y NOCLIP
+--==============================
+
 local function setInvisible()
         if not Invisible then return end
         local character = player.Character
@@ -678,10 +694,13 @@ RunService.Stepped:Connect(function()
         end
 end)
 --==================================================
--- DARKSHIELD  |  PARTE 3 DE 3
+-- DARKSHIELD  |  PARTE 4 DE 4
 --==================================================
 
--- Aimbot
+--==============================
+-- AIMBOT
+--==============================
+
 local function getClosestHead()
         camera = workspace.CurrentCamera
         if not camera then return nil end
@@ -723,7 +742,10 @@ RunService.RenderStepped:Connect(function()
         end
 end)
 
--- X-Ray
+--==============================
+-- X-RAY
+--==============================
+
 local xrayParts = {}
 local function enableXRay()
         for _,object in ipairs(workspace:GetDescendants()) do
@@ -747,6 +769,78 @@ local function disableXRay()
         end
         table.clear(xrayParts)
 end
+
+--==============================
+-- SIN ENFRIAMIENTO / BALAS INFINITAS
+--==============================
+
+local ABILITY_WORDS = {
+        "skill", "ability", "cast", "spell", "use", "attack",
+        "dash", "blink", "punch", "throw", "heal", "summon", "ultimate"
+}
+
+local AMMO_WORDS = {
+        "ammo", "ammunition", "balas", "municion", "mag",
+        "clip", "rounds", "bullets", "charges", "cargas", "bulletsleft"
+}
+
+local function matchWords(name, words)
+        local n = string.lower(name)
+        for _, w in ipairs(words) do
+                if string.find(n, w, 1, true) then
+                        return true
+                end
+        end
+        return false
+end
+
+local lastRemote = {}
+
+local function fillAmmo()
+        local roots = { player.PlayerGui, player.Backpack, player.Character }
+
+        for _, root in ipairs(roots) do
+                if root then
+                        for _, obj in ipairs(root:GetDescendants()) do
+                                if obj:IsA("ValueBase") and matchWords(obj.Name, AMMO_WORDS) then
+                                        if obj:IsA("IntValue") or obj:IsA("NumberValue") then
+                                                if obj.Value < AMMO_VALUE - 50 then
+                                                        obj.Value = AMMO_VALUE
+                                                end
+                                        elseif obj:IsA("StringValue") then
+                                                local num = tonumber(obj.Value)
+                                                if num and num < AMMO_VALUE - 50 then
+                                                        obj.Value = tostring(AMMO_VALUE)
+                                                end
+                                        end
+                                end
+                        end
+                end
+        end
+
+        local character = player.Character
+        local tool = character and character:FindFirstChildOfClass("Tool")
+        if tool then
+                for attr, value in pairs(tool:GetAttributes()) do
+                        if type(value) == "number" and matchWords(attr, AMMO_WORDS) and value < AMMO_VALUE - 50 then
+                                pcall(function()
+                                        tool:SetAttribute(attr, AMMO_VALUE)
+                                end)
+                        end
+                end
+        end
+end
+
+task.spawn(function()
+        while true do
+                if InfiniteAmmo then
+                        pcall(fillAmmo)
+                        task.wait(0.25)
+                else
+                        task.wait(0.2)
+                end
+        end
+end)
 
 --==============================
 -- WALLBANG / SILENT AIM
@@ -865,6 +959,25 @@ local function install()
         local ok, fn = pcall(hookmetamethod, game, "__namecall", function(self, ...)
                 local method = getnamecallmethod()
 
+                if NoCooldown and method == "FireServer" and typeof(self) == "Instance" then
+                        if self:IsA("RemoteEvent") and matchWords(self.Name, ABILITY_WORDS) then
+                                local now = os.clock()
+                                if now - (lastRemote[self.Name] or 0) > CD_REMOTE_DELAY then
+                                        lastRemote[self.Name] = now
+
+                                        local args = { ... }
+                                        task.spawn(function()
+                                                for _ = 1, CD_REPEAT do
+                                                        task.wait(0.03)
+                                                        pcall(function()
+                                                                self:FireServer(table.unpack(args, 1, #args))
+                                                        end)
+                                                end
+                                        end)
+                                end
+                        end
+                end
+
                 if guard then
                         return original(self, ...)
                 end
@@ -931,7 +1044,12 @@ local function install()
         end
 end
 
--- NPCs Caché
+install()
+
+--==============================
+-- NPCs / TRAER ENEMIGOS
+--==============================
+
 local npcCache = {}
 local function scanNPCs()
         local found = {}
@@ -959,7 +1077,6 @@ task.spawn(function()
         end
 end)
 
--- Bring logic
 local function collectTargets()
         local targets = {}
         for _, plr in ipairs(Players:GetPlayers()) do
@@ -1021,7 +1138,10 @@ task.spawn(function()
         end
 end)
 
--- Conexiones de Botones
+--==============================
+-- BOTONES
+--==============================
+
 espButton.Activated:Connect(function()
         ESP = not ESP
         espButton.Text = ESP and "👁️ ESP Rainbow: ON" or "👁️ ESP Rainbow: OFF"
@@ -1069,6 +1189,18 @@ silentButton.Activated:Connect(function()
         install()
 end)
 
+cooldownButton.Activated:Connect(function()
+        NoCooldown = not NoCooldown
+        cooldownButton.Text = NoCooldown and "⏱️ Sin Enfriamiento: ON" or "⏱️ Sin Enfriamiento: OFF"
+        install()
+end)
+
+ammoButton.Activated:Connect(function()
+        InfiniteAmmo = not InfiniteAmmo
+        ammoButton.Text = InfiniteAmmo and "🔋 Balas Infinitas: ON" or "🔋 Balas Infinitas: OFF"
+        if InfiniteAmmo then pcall(fillAmmo) end
+end)
+
 bringButton.Activated:Connect(function()
         BringAll = not BringAll
         bringButton.Text = BringAll and "🧲 Traer Enemigos: ON" or "🧲 Traer Enemigos: OFF"
@@ -1092,54 +1224,4 @@ end)
 
 anchorButton.Activated:Connect(function()
         AnchorBring = not AnchorBring
-        anchorButton.Text = AnchorBring and "🔒 Anclar Traídos: ON" or "🔒 Anclar Traídos: OFF"
-        if not AnchorBring then
-                for _, plr in ipairs(Players:GetPlayers()) do
-                        if plr ~= player and plr.Character then
-                                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                                if hrp then hrp.Anchored = false end
-                        end
-                end
-        end
-end)
-
---==============================
--- BOTÓN LATERAL ARRASTRABLE
---==============================
-
-local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.fromOffset(48, 48)
-openButton.Position = UDim2.new(1, -58, 0.5, -24)
-openButton.Text = "🛡️"
-openButton.TextSize = 22
-openButton.Font = Enum.Font.GothamBold
-openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-openButton.BackgroundTransparency = 0
-openButton.Visible = false
-openButton.ZIndex = 12
-openButton.Parent = gui
-
-local openCorner = Instance.new("UICorner")
-openCorner.CornerRadius = UDim.new(1, 0)
-openCorner.Parent = openButton
-
-local openStroke = Instance.new("UIStroke")
-openStroke.Thickness = 1.5
-openStroke.Color = Color3.fromRGB(150, 150, 150)
-openStroke.Parent = openButton
-
-local openWasDragged = makeDraggable(openButton, openButton)
-
-close.Activated:Connect(function()
-        main.Visible = false
-        openButton.Visible = true
-end)
-
-openButton.Activated:Connect(function()
-        if openWasDragged() then return end
-        main.Visible = true
-        openButton.Visible = false
-end)
-
-print(" DARKSHIELD (CREATED BY NSAKI_DZHUB) cargado correctamente")
+        anchorButton.Text = AnchorBring and "🔒 Anclar Traídos: ON" or "🔒 Anclar Traídos: OF
